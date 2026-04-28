@@ -7,7 +7,6 @@ pub struct AppConfig {
     pub host: String,
     pub port: u16,
     pub channels: Vec<String>,
-    pub go_compat_url: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -16,7 +15,6 @@ impl Default for AppConfig {
             host: "0.0.0.0".to_string(),
             port: 8888,
             channels: vec!["tgsearchers6".to_string()],
-            go_compat_url: None,
         }
     }
 }
@@ -33,7 +31,7 @@ impl AppConfig {
                 match std::fs::read_to_string(&config_path) {
                     Ok(content) => match serde_yml::from_str::<Self>(&content) {
                         Ok(config) => {
-                            info!("加载配置文件: {}", config_path.display());
+                            info!("加载配置文件: {}: {:?}", config_path.display(), &config);
                             return config;
                         }
                         Err(e) => {

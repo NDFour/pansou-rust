@@ -2,4 +2,7 @@ host: 0.0.0.0
 port: 8888
 channels:
   - tgsearchers6
-go_compat_url: http://127.0.0.1:8889
+  - tgsearchers4
+  - Aliyun_4K_Movies
+  - bdbdndn11
+  - yunpanx

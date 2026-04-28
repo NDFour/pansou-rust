@@ -5,9 +5,10 @@ use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::Deserialize;
+use tracing::info;
 
 use crate::model::{
-    FilterConfig, GoApiResponse, Link, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
+    FilterConfig, Link, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
 };
 
 use crate::plugin::PluginRegistry;
@@ -45,12 +46,11 @@ const PRIORITY_KEYWORDS: [&str; 7] = ["合集", "系列", "全", "完", "最新"
 #[derive(Clone)]
 pub struct SearchService {
     client: Client,
-    go_compat_url: Option<String>,
     plugin_registry: Arc<PluginRegistry>,
 }
 
 impl SearchService {
-    pub fn new(go_compat_url: Option<String>) -> Self {
+    pub fn new() -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(8))
             .timeout(Duration::from_secs(12))
@@ -59,11 +59,13 @@ impl SearchService {
             .unwrap_or_else(|_| Client::new());
         Self {
             client,
-            go_compat_url,
             plugin_registry: Arc::new(PluginRegistry::new()),
         }
     }
 
+    /// 总搜索入口
+    /// 根据请求类型，调用相应的搜索方法
+    /// 最终返回合并后的搜索结果
     pub async fn search(&self, req: &SearchRequest) -> SearchResponse {
         let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
         let tg_results = if source_type == "all" || source_type == "tg" { self.search_tg(req).await } else { vec![] };
@@ -75,13 +77,6 @@ impl SearchService {
             vec![]
         };
 
-        // Go bridge fallback (for plugins not yet migrated to Rust)
-        let go_bridge_results = if (source_type == "all" || source_type == "plugin") && self.go_compat_url.is_some() {
-            self.search_plugins_by_go_bridge(req).await
-        } else {
-            vec![]
-        };
-
         let panshushu_results = if source_type == "all" || source_type == "plugin" {
             self.search_panshushu(&req.keyword).await
         } else {
@@ -89,7 +84,6 @@ impl SearchService {
         };
 
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
-        all_results = merge_search_results(all_results, go_bridge_results);
         all_results = merge_search_results(all_results, panshushu_results);
         sort_results_by_time_and_keywords(&mut all_results);
 
@@ -116,10 +110,11 @@ impl SearchService {
     }
 
     async fn search_tg(&self, req: &SearchRequest) -> Vec<SearchResult> {
-        let channels = if req.channels.is_empty() { vec!["tgsearchers6".to_string()] } else { req.channels.clone() };
+        let channels = if req.channels.is_empty() { vec![] } else { req.channels.clone() };
         let mut out = Vec::new();
         for channel in channels {
             let url = format!("https://t.me/s/{}?q={}", channel, urlencoding(&req.keyword));
+            info!("搜索TG频道: {}", url);
             if let Ok(resp) = self.client.get(url).send().await {
                 if let Ok(body) = resp.text().await {
                     out.extend(parse_tg_results(&body, &channel));
@@ -139,22 +134,6 @@ impl SearchService {
         self.plugin_registry
             .search_all(keyword, &plugin_client)
             .await
-    }
-
-    async fn search_plugins_by_go_bridge(&self, req: &SearchRequest) -> Vec<SearchResult> {
-        let Some(base) = &self.go_compat_url else { return vec![]; };
-        let mut bridge_req = req.clone();
-        bridge_req.source_type = "plugin".to_string();
-        bridge_req.result_type = "all".to_string();
-        bridge_req.channels.clear();
-
-        let url = format!("{}/api/search", base.trim_end_matches('/'));
-        let Ok(resp) = self.client.post(url).json(&bridge_req).send().await else { return vec![]; };
-        let Ok(wrapped) = resp.json::<GoApiResponse<SearchResponse>>().await else { return vec![]; };
-        if wrapped.code != 0 {
-            return vec![];
-        }
-        wrapped.data.map(|d| d.results).unwrap_or_default()
     }
 
     async fn search_panshushu(&self, keyword: &str) -> Vec<SearchResult> {

@@ -144,12 +144,4 @@ pub struct CheckResponse {
     pub results: Vec<CheckResult>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GoApiResponse<T> {
-    pub code: i32,
-    #[allow(dead_code)]
-    pub message: String,
-    pub data: Option<T>,
-}
-
 

@@ -39,8 +39,8 @@ async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_file();
     let state = Arc::new(AppState {
         config: config.clone(),
-        search_service: SearchService::new(config.go_compat_url.clone()),
-        check_service: CheckService::new(config.go_compat_url.clone()),
+        search_service: SearchService::new(),
+        check_service: CheckService::new(),
     });
 
     let static_dir = std::env::current_dir()

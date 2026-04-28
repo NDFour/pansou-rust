@@ -8,23 +8,22 @@ use chrono::Utc;
 use reqwest::Client;
 use url::Url;
 
-use crate::model::{CheckItem, CheckRequest, CheckResponse, CheckResult};
+use crate::model::{CheckItem, CheckResponse, CheckResult};
 
 #[derive(Clone)]
 pub struct CheckService {
     cache: Arc<Mutex<HashMap<String, (CheckResult, Instant)>>>,
-    go_compat_url: Option<String>,
     client: Client,
 }
 
 impl Default for CheckService {
     fn default() -> Self {
-        Self::new(None)
+        Self::new()
     }
 }
 
 impl CheckService {
-    pub fn new(go_compat_url: Option<String>) -> Self {
+    pub fn new() -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(8))
             .timeout(Duration::from_secs(15))
@@ -33,31 +32,16 @@ impl CheckService {
             .unwrap_or_else(|_| Client::new());
         Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
-            go_compat_url,
             client,
         }
     }
 
     pub async fn check(&self, items: &[CheckItem]) -> CheckResponse {
-        if let Some(resp) = self.check_by_go_bridge(items).await {
-            return resp;
-        }
         let mut results = Vec::with_capacity(items.len());
         for item in items {
             results.push(self.check_one(item));
         }
         CheckResponse { results }
-    }
-
-    async fn check_by_go_bridge(&self, items: &[CheckItem]) -> Option<CheckResponse> {
-        let base = self.go_compat_url.as_ref()?;
-        let req = CheckRequest {
-            items: items.to_vec(),
-            view_token: String::new(),
-        };
-        let url = format!("{}/api/check/links", base.trim_end_matches('/'));
-        let resp = self.client.post(url).json(&req).send().await.ok()?;
-        resp.json::<CheckResponse>().await.ok()
     }
 
     fn check_one(&self, item: &CheckItem) -> CheckResult {
