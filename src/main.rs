@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         .compact()
         .init();
 
-    let config = AppConfig::from_env();
+    let config = AppConfig::from_file();
     let state = Arc::new(AppState {
         config: config.clone(),
         search_service: SearchService::new(config.go_compat_url.clone()),
@@ -66,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .with_state(state);
 
-    let addr = format!("0.0.0.0:{}", config.port);
+    let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Rust服务启动: http://{}", addr);
     axum::serve(listener, app).await?;

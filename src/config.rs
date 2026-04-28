@@ -1,37 +1,55 @@
-use std::env;
+use serde::Deserialize;
+use tracing::{info, warn};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
+    pub host: String,
     pub port: u16,
     pub channels: Vec<String>,
     pub go_compat_url: Option<String>,
 }
 
-impl AppConfig {
-    pub fn from_env() -> Self {
-        let port = env::var("PORT")
-            .ok()
-            .and_then(|v| v.parse::<u16>().ok())
-            .unwrap_or(8888);
-        let channels = parse_list(env::var("CHANNELS").unwrap_or_else(|_| "tgsearchers6".to_string()));
-        let go_compat_url = env::var("GO_COMPAT_URL")
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty());
-
+impl Default for AppConfig {
+    fn default() -> Self {
         Self {
-            port,
-            channels,
-            go_compat_url,
+            host: "0.0.0.0".to_string(),
+            port: 8888,
+            channels: vec!["tgsearchers6".to_string()],
+            go_compat_url: None,
         }
     }
 }
 
-fn parse_list(input: String) -> Vec<String> {
-    input
-        .split(',')
-        .map(str::trim)
-        .filter(|v| !v.is_empty())
-        .map(ToOwned::to_owned)
-        .collect()
+impl AppConfig {
+    pub fn from_file() -> Self {
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+
+        if let Some(dir) = exe_dir {
+            let config_path = dir.join("config.yaml");
+            if config_path.exists() {
+                match std::fs::read_to_string(&config_path) {
+                    Ok(content) => match serde_yml::from_str::<Self>(&content) {
+                        Ok(config) => {
+                            info!("加载配置文件: {}", config_path.display());
+                            return config;
+                        }
+                        Err(e) => {
+                            warn!("解析配置文件失败: {}: {}, 使用默认配置", config_path.display(), e);
+                        }
+                    },
+                    Err(e) => {
+                        warn!("读取配置文件失败: {}: {}, 使用默认配置", config_path.display(), e);
+                    }
+                }
+            } else {
+                warn!("配置文件不存在: {}, 使用默认配置: {}", config_path.display(), config_path.display());
+            }
+        }
+
+        info!("使用默认配置");
+        Self::default()
+    }
 }
