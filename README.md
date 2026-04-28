@@ -1,38 +1,36 @@
-# PanSou Rust 版本（迁移中）
+# PanSou Rust
 
-该目录提供 PanSou 的 Rust 后端迁移版本，当前已对齐以下 API 路由与核心服务逻辑：
+PanSou 的 Rust 后端版本，提供 TG 频道搜索与网盘资源搜索聚合。
 
-- `POST /api/auth/login`
-- `POST /api/auth/verify`
-- `POST /api/auth/logout`
-- `GET/POST /api/search`
-- `POST /api/check/links`
-- `GET /api/health`
+## API 路由
+
+- `GET/POST /api/search` — 搜索
+- `POST /api/check/links` — 批量链接有效性检测
+- `GET /api/health` — 健康检查
 
 ## 运行
 
 ```bash
-cd rust
 cargo run
 ```
 
-默认监听 `8888` 端口，可通过环境变量配置：
+默认监听 `8888` 端口，配置通过 `config.yaml` 文件管理：
 
-- `PORT`
-- `AUTH_ENABLED`
-- `AUTH_USERS`
-- `AUTH_TOKEN_EXPIRY`
-- `AUTH_JWT_SECRET`
-- `CHANNELS`
-- `GO_COMPAT_URL`（可选，指向现有 Go 服务，如 `http://127.0.0.1:8889`）
+```yaml
+host: 0.0.0.0
+port: 8888
+channels:
+  - tgsearchers6
+  - tgsearchers4
+log_level: info
+log_file: logs/app.log
+concurrency: 2
+```
 
 ## 说明
 
-- API 路由、请求字段和主要响应结构已与 Go 版本保持兼容。
-- 已迁移搜索核心算法：`src/res/plugins/cloud_types/filter` 语义、结果合并去重、优先级排序、`merged_by_type` 聚合。
-- 已迁移 TG 搜索抓取链路（`t.me/s/{channel}?q=...`）与页面解析骨架。
-- 已迁移链接检测核心框架：标准化、状态机、TTL缓存、批量检测响应结构。
-- 当设置 `GO_COMPAT_URL` 时：
-  - `src=plugin` 和 `src=all` 的插件搜索自动桥接 Go 版本完整插件能力
-  - `/api/check/links` 自动桥接 Go 版本全平台检测逻辑
-  - 对外 API 行为保持等价，Rust 负责统一鉴权、中间件、参数规范化与结果聚合
+- API 路由、请求字段和响应结构与 Go 版本保持兼容。
+- 搜索核心：TG 频道抓取（`t.me/s/{channel}?q=...`）与网盘插件搜索并行执行，结果合并去重、优先级排序、`merged_by_type` 聚合。
+- 网盘插件：`panshushu`、`jikepan`、`pan666`、`alupan`、`yunsou`（`src/plugin/`）。
+- 链接检测：标准化、状态机、TTL 内存缓存，批量检测响应结构。
+- 日志：使用 `tracing` 输出到控制台及文件，每次请求自动生成 `request_id` 贯穿上下文。
