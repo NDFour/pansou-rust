@@ -30,16 +30,20 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let config = AppConfig::from_file();
+
     tracing_subscriber::fmt()
-        .with_env_filter("info")
+        .with_env_filter(&config.log_level)
         .with_target(false)
         .compact()
         .init();
 
-    let config = AppConfig::from_file();
+    info!("日志级别: {}", config.log_level);
+    info!("配置: {:?}", config);
+
     let state = Arc::new(AppState {
         config: config.clone(),
-        search_service: SearchService::new(),
+        search_service: SearchService::new(config.concurrency),
         check_service: CheckService::new(),
     });
 

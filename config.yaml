@@ -6,3 +6,7 @@ channels:
   - Aliyun_4K_Movies
   - bdbdndn11
   - yunpanx
+
+log_level: debug
+# 查询 tg 时的并发数
+concurrency: 2

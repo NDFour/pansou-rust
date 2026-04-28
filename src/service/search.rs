@@ -12,14 +12,17 @@ use crate::model::{
 
 use crate::plugin::PluginRegistry;
 
+use tokio::task::JoinSet;
+
 #[derive(Clone)]
 pub struct SearchService {
     client: Client,
+    concurrency: usize,
     plugin_registry: Arc<PluginRegistry>,
 }
 
 impl SearchService {
-    pub fn new() -> Self {
+    pub fn new(concurrency: usize) -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(8))
             .timeout(Duration::from_secs(12))
@@ -28,6 +31,7 @@ impl SearchService {
             .unwrap_or_else(|_| Client::new());
         Self {
             client,
+            concurrency: concurrency.max(1),
             plugin_registry: Arc::new(PluginRegistry::new()),
         }
     }
@@ -36,22 +40,15 @@ impl SearchService {
         self.plugin_registry.clone()
     }
 
-    /// 总搜索入口
-    /// 根据请求类型，调用相应的搜索方法
-    /// 最终返回合并后的搜索结果
     pub async fn search(&self, req: &SearchRequest) -> SearchResponse {
         let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
+        let need_tg = source_type == "all" || source_type == "tg";
+        let need_plugin = source_type == "all" || source_type == "plugin";
 
-        info!("搜索 tg");
-        let tg_results = if source_type == "all" || source_type == "tg" { self.search_tg(req).await } else { vec![] };
-
-        info!("搜索插件");
-        // Native Rust plugins
-        let native_plugin_results = if source_type == "all" || source_type == "plugin" {
-            self.search_native_plugins(&req.keyword).await
-        } else {
-            vec![]
-        };
+        let (tg_results, native_plugin_results) = tokio::join!(
+            async { if need_tg { self.search_tg(req).await } else { vec![] } },
+            async { if need_plugin { self.search_native_plugins(&req.keyword).await } else { vec![] } },
+        );
 
         info!("合并搜索结果: tg: {:?}, plugin: {:?}", tg_results.len(), native_plugin_results.len());
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
@@ -71,21 +68,41 @@ impl SearchService {
     }
 
     async fn search_tg(&self, req: &SearchRequest) -> Vec<SearchResult> {
+        // info!("搜索 tg: {:?}", req.keyword);
         let channels = if req.channels.is_empty() { vec![] } else { req.channels.clone() };
-        let mut out = Vec::new();
+        if channels.is_empty() {
+            return vec![];
+        }
+
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.concurrency));
+        let keyword = req.keyword.clone();
+        let client = self.client.clone();
+
+        let mut set = JoinSet::new();
         for channel in channels {
-            let url = format!("https://t.me/s/{}?q={}", channel, urlencoding(&req.keyword));
-            info!("搜索TG频道: {}", url);
-            if let Ok(resp) = self.client.get(url).send().await {
-                if let Ok(body) = resp.text().await {
-                    out.extend(parse_tg_results(&body, &channel));
-                }
+            let client = client.clone();
+            let kw = keyword.clone();
+            let permit = semaphore.clone();
+            set.spawn(async move {
+                let _guard = permit.acquire().await;
+                let url = format!("https://t.me/s/{}?q={}", channel, urlencoding(&kw));
+                let resp = client.get(&url).send().await?;
+                let body = resp.text().await?;
+                Ok::<_, reqwest::Error>(parse_tg_results(&body, &channel))
+            });
+        }
+
+        let mut out = Vec::new();
+        while let Some(result) = set.join_next().await {
+            if let Ok(Ok(results)) = result {
+                out.extend(results);
             }
         }
         out
     }
 
     async fn search_native_plugins(&self, keyword: &str) -> Vec<SearchResult> {
+        // info!("搜索插件: {:?}", keyword);
         let plugin_client = Client::builder()
             .connect_timeout(Duration::from_secs(8))
             .timeout(Duration::from_secs(30))
