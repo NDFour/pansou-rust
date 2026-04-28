@@ -8,10 +8,6 @@ const API_BASE = '/api';
    State
    ============================================================ */
 const state = {
-  token: localStorage.getItem('pansou_token') || null,
-  username: localStorage.getItem('pansou_username') || null,
-  tokenExpiresAt: localStorage.getItem('pansou_token_expires_at') || null,
-
   // Search state
   searchResults: null,
   viewMode: 'list', // 'list' | 'merged'
@@ -31,24 +27,12 @@ const api = {
     const url = API_BASE + path;
     const headers = { 'Content-Type': 'application/json' };
 
-    if (state.token && !opts.skipAuth) {
-      headers['Authorization'] = `Bearer ${state.token}`;
-    }
-
     const config = { method, headers };
     if (body && method !== 'GET') {
       config.body = JSON.stringify(body);
     }
 
     const res = await fetch(url, config);
-
-    // Handle auth errors globally
-    if (res.status === 401) {
-      this.clearAuth();
-      if (!opts.silentAuth) {
-        window.location.href = '/login.html';
-      }
-    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -65,46 +49,6 @@ const api = {
 
   post(path, body = {}, opts = {}) {
     return this.request('POST', path, body, opts);
-  },
-
-  // Auth
-  async login(username, password) {
-    const data = await this.post('/auth/login', { username, password }, { skipAuth: true, silentAuth: true });
-    if (data.token) {
-      state.token = data.token;
-      state.username = data.username || username;
-      state.tokenExpiresAt = data.expires_at;
-      localStorage.setItem('pansou_token', data.token);
-      localStorage.setItem('pansou_username', state.username);
-      if (data.expires_at) {
-        localStorage.setItem('pansou_token_expires_at', data.expires_at);
-      }
-    }
-    return data;
-  },
-
-  async verify() {
-    if (!state.token) return { valid: false };
-    try {
-      const data = await this.post('/auth/verify', {}, { skipAuth: false });
-      return data;
-    } catch {
-      return { valid: false };
-    }
-  },
-
-  clearAuth() {
-    state.token = null;
-    state.username = null;
-    state.tokenExpiresAt = null;
-    localStorage.removeItem('pansou_token');
-    localStorage.removeItem('pansou_username');
-    localStorage.removeItem('pansou_token_expires_at');
-  },
-
-  logout() {
-    this.post('/auth/logout', {}, { skipAuth: false }).catch(() => {});
-    this.clearAuth();
   },
 
   // Search
@@ -124,19 +68,19 @@ const api = {
       body.filter = params.filter;
     }
 
-    const data = await this.post('/search', body, { skipAuth: false });
+    const data = await this.post('/search', body);
     return data.data;
   },
 
   // Link checking
   async checkLinks(items) {
-    const data = await this.post('/check/links', { items }, { skipAuth: false });
+    const data = await this.post('/check/links', { items });
     return data;
   },
 
   // Health
   async health() {
-    const data = await this.get('/health', {}, { skipAuth: true });
+    const data = await this.get('/health');
     return data;
   },
 };
@@ -173,41 +117,6 @@ const Toast = {
   error(msg) { this.show(msg, 'error'); },
   info(msg) { this.show(msg, 'info'); },
 };
-
-/* ============================================================
-   Auth UI
-   ============================================================ */
-function updateAuthUI() {
-  const loginBtn = document.getElementById('nav-login-btn');
-  const userInfo = document.getElementById('nav-user-info');
-  const usernameSpan = document.getElementById('nav-username');
-  const logoutBtn = document.getElementById('nav-logout-btn');
-
-  if (!loginBtn || !userInfo) return;
-
-  if (state.token && state.username) {
-    loginBtn.classList.add('hidden');
-    userInfo.classList.remove('hidden');
-    if (usernameSpan) usernameSpan.textContent = state.username;
-  } else {
-    loginBtn.classList.remove('hidden');
-    userInfo.classList.add('hidden');
-  }
-}
-
-async function checkAuth() {
-  const data = await api.verify();
-  if (!data.valid) {
-    api.clearAuth();
-  }
-  updateAuthUI();
-}
-
-function handleLogout() {
-  api.logout();
-  updateAuthUI();
-  Toast.info('已退出登录');
-}
 
 /* ============================================================
    Search UI
@@ -741,76 +650,8 @@ function bindResultEvents() {
    Init
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
-  // Init auth UI
-  updateAuthUI();
-  checkAuth();
-
-  // Bind logout
-  const logoutBtn = document.getElementById('nav-logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-
   // Init search if on search page
   if (document.getElementById('search-input')) {
     initSearchPage();
   }
-
-  // Init login form if on login page
-  const loginForm = document.getElementById('login-form');
-  if (loginForm) {
-    initLoginPage();
-  }
 });
-
-/* ============================================================
-   Login Page
-   ============================================================ */
-function initLoginPage() {
-  const form = document.getElementById('login-form');
-  const errorEl = document.getElementById('login-error');
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const username = document.getElementById('login-username')?.value?.trim();
-    const password = document.getElementById('login-password')?.value?.trim();
-
-    if (!username || !password) {
-      if (errorEl) {
-        errorEl.textContent = '请输入用户名和密码';
-        errorEl.classList.remove('hidden');
-      }
-      return;
-    }
-
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span class="spinner"></span> 登录中...';
-    }
-    if (errorEl) errorEl.classList.add('hidden');
-
-    try {
-      await api.login(username, password);
-      updateAuthUI();
-      Toast.success('登录成功');
-
-      // Redirect if there's a redirect param
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/index.html';
-      setTimeout(() => {
-        window.location.href = redirect;
-      }, 500);
-    } catch (err) {
-      if (errorEl) {
-        errorEl.textContent = err.message || '登录失败';
-        errorEl.classList.remove('hidden');
-      }
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '登录';
-      }
-    }
-  });
-}

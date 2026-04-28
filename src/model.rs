@@ -152,16 +152,4 @@ pub struct GoApiResponse<T> {
     pub data: Option<T>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LoginResponse {
-    pub token: String,
-    pub expires_at: i64,
-    pub username: String,
-}
 

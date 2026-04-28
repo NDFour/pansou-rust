@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    extract::{Extension, Query, State},
+    extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -9,90 +9,13 @@ use axum::{
 use serde_json::{json, Value};
 
 use crate::{
-    auth::generate_token,
-    model::{ApiResponse, CheckRequest, LoginRequest, LoginResponse, SearchRequest},
+    model::{ApiResponse, CheckRequest, SearchRequest},
     AppState,
 };
-
-pub async fn login_handler(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<LoginRequest>,
-) -> impl IntoResponse {
-    if req.username.trim().is_empty() || req.password.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({"error":"参数错误：用户名和密码不能为空"})),
-        );
-    }
-    if !state.config.auth_enabled {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error":"认证功能未启用"})),
-        );
-    }
-    if state.config.auth_users.is_empty() {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error":"认证系统未正确配置"})),
-        );
-    }
-    let matched = state
-        .config
-        .auth_users
-        .get(&req.username)
-        .map(|pwd| pwd == &req.password)
-        .unwrap_or(false);
-    if !matched {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({"error":"用户名或密码错误"})),
-        );
-    }
-
-    match generate_token(
-        &req.username,
-        &state.config.auth_jwt_secret,
-        state.config.auth_token_expiry_hours,
-    ) {
-        Ok((token, expires_at)) => (
-            StatusCode::OK,
-            Json(json!(LoginResponse {
-                token,
-                expires_at,
-                username: req.username,
-            })),
-        ),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error":"生成令牌失败"})),
-        ),
-    }
-}
-
-pub async fn verify_handler(
-    State(state): State<Arc<AppState>>,
-    username: Option<Extension<String>>,
-) -> impl IntoResponse {
-    if !state.config.auth_enabled {
-        return (
-            StatusCode::OK,
-            Json(json!({"valid":true,"message":"认证功能未启用"})),
-        );
-    }
-    if let Some(Extension(name)) = username {
-        return (StatusCode::OK, Json(json!({"valid":true,"username":name})));
-    }
-    (StatusCode::UNAUTHORIZED, Json(json!({"error":"未授权"})))
-}
-
-pub async fn logout_handler() -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({"message":"退出成功"})))
-}
 
 pub async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let resp = json!({
         "status":"ok",
-        "auth_enabled": state.config.auth_enabled,
         "plugins_enabled": true,
         "native_plugins": 4,
         "go_compat_enabled": state.config.go_compat_url.is_some(),
