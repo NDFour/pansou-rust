@@ -53,7 +53,13 @@ pub async fn auth_middleware(
     }
 
     let path = req.uri().path();
-    if path.starts_with("/api/auth/login") || path.starts_with("/api/auth/logout") || path.starts_with("/api/health")
+    if path.starts_with("/api/auth/login")
+        || path.starts_with("/api/auth/logout")
+        || path.starts_with("/api/health")
+        || path == "/"
+        || path.starts_with("/index.html")
+        || path.starts_with("/login.html")
+        || path.starts_with("/static/")
     {
         return Ok(next.run(req).await);
     }

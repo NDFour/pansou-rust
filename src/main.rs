@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware,
+    response::Redirect,
     routing::{get, post},
     Router,
 };
@@ -16,6 +17,7 @@ use service::{CheckService, SearchService};
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
+    services::ServeDir,
     trace::TraceLayer,
 };
 use tracing::info;
@@ -44,14 +46,20 @@ async fn main() -> anyhow::Result<()> {
         check_service: CheckService::new(config.go_compat_url.clone()),
     });
 
+    let static_dir = std::env::current_dir()
+        .map(|d| d.join("static"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("static"));
+
     let api_router = Router::new()
-        .route("/", get(handlers::health_handler))
+        .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/api/auth/login", post(handlers::login_handler))
         .route("/api/auth/verify", post(handlers::verify_handler))
         .route("/api/auth/logout", post(handlers::logout_handler))
         .route("/api/search", get(handlers::search_get_handler).post(handlers::search_post_handler))
         .route("/api/check/links", post(handlers::check_handler))
-        .route("/api/health", get(handlers::health_handler));
+        .route("/api/health", get(handlers::health_handler))
+        .nest_service("/static", ServeDir::new(&static_dir))
+        .fallback_service(ServeDir::new(&static_dir));
 
     let app = api_router
         .layer(middleware::from_fn_with_state(

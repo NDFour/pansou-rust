@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PanSou 盘搜 — 云盘资源搜索</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">
+        <span class="nav-brand-icon">盘</span>
+        PanSou
+      </a>
+      <ul class="nav-links">
+        <li><a href="/">搜索</a></li>
+        <li><a href="#" onclick="document.getElementById('search-input').focus();return false">资源</a></li>
+      </ul>
+      <div class="nav-auth">
+        <a href="/login.html" class="btn btn-secondary btn-sm" id="nav-login-btn">登录</a>
+        <div id="nav-user-info" class="flex items-center gap-md hidden">
+          <span class="body-small text-olive" id="nav-username"></span>
+          <button class="btn btn-secondary btn-sm" id="nav-logout-btn">退出</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="section-light">
+    <div class="hero">
+      <h1 class="hero-heading">找到你想要的资源</h1>
+      <p class="hero-subtitle">搜索 TG 频道和各大云盘，快速获取网盘链接、密码与资源信息</p>
+
+      <!-- Search Bar -->
+      <div class="hero-search">
+        <div class="search-bar">
+          <input
+            type="text"
+            id="search-input"
+            class="search-bar-input"
+            placeholder="输入关键词搜索资源..."
+            autocomplete="off"
+            autofocus
+          >
+          <button class="search-bar-btn" id="search-btn">搜索</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <span class="filter-group-label">数据源</span>
+            <button class="filter-chip active" data-filter-group="sourceType" data-filter-value="all">全部</button>
+            <button class="filter-chip" data-filter-group="sourceType" data-filter-value="tg">TG频道</button>
+            <button class="filter-chip" data-filter-group="sourceType" data-filter-value="plugin">插件</button>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-group-label">频道</span>
+            <button class="filter-chip active" data-filter-group="channel" data-filter-value="">全部</button>
+            <button class="filter-chip" data-filter-group="channel" data-filter-value="tgsearchers6">TG搜索</button>
+            <button class="filter-chip" data-filter-group="channel" data-filter-value="yunpanpan">云盘盘</button>
+            <button class="filter-chip" data-filter-group="channel" data-filter-value="zhao_source">赵资源</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results Section -->
+  <section class="section-ivory section-sm">
+    <div class="container">
+      <div class="results-header">
+        <span class="results-count" id="results-count"></span>
+        <div class="results-view-tabs">
+          <button class="view-tab active" data-view="list">列表视图</button>
+          <button class="view-tab" data-view="merged">分类聚合</button>
+        </div>
+      </div>
+
+      <div id="results-container">
+        <div class="empty-state">
+          <div class="empty-state-icon">🔍</div>
+          <h3>输入关键词开始搜索</h3>
+          <p>搜索 TG 频道和云盘资源，获取网盘链接</p>
+        </div>
+      </div>
+
+      <!-- Pagination (hidden by default) -->
+      <div class="pagination hidden" id="pagination"></div>
+    </div>
+  </section>
+
+  <!-- Dark Section — About -->
+  <section class="section-dark section-sm">
+    <div class="container text-center">
+      <h4 class="mb-lg">PanSou 盘搜</h4>
+      <p class="body-large text-silver mb-xl">聚合搜索 TG 频道与云端资源，覆盖百度网盘、阿里云盘、夸克网盘、天翼云盘等主流平台</p>
+      <p class="caption text-silver">支持平台: 百度网盘 · 阿里云盘 · 夸克网盘 · 天翼云盘 · 蓝奏云 · 123云盘</p>
+    </div>
+  </section>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
