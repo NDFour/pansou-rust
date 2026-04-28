@@ -45,6 +45,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let api_router = Router::new()
+        .route("/", get(handlers::health_handler))
         .route("/api/auth/login", post(handlers::login_handler))
         .route("/api/auth/verify", post(handlers::verify_handler))
         .route("/api/auth/logout", post(handlers::logout_handler))
