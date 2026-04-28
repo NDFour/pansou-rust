@@ -15,10 +15,10 @@ use crate::{
 
 pub async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let resp = json!({
+        "timestamp": chrono::Utc::now().timestamp_millis(),
         "status":"ok",
         "plugins_enabled": true,
-        "native_plugins": 5,
-        "channels_count": state.config.channels.len(),
+        "native_plugins": state.search_service.plugin_registry().list().into_iter().map(|p| p.name()).collect::<Vec<_>>(),
         "channels": state.config.channels,
     });
     (StatusCode::OK, Json(resp))

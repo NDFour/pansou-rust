@@ -32,6 +32,10 @@ impl SearchService {
         }
     }
 
+    pub fn plugin_registry(&self) -> Arc<PluginRegistry> {
+        self.plugin_registry.clone()
+    }
+
     /// 总搜索入口
     /// 根据请求类型，调用相应的搜索方法
     /// 最终返回合并后的搜索结果
