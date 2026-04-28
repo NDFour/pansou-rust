@@ -20,6 +20,8 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing::info;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -32,11 +34,32 @@ pub struct AppState {
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_file();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(&config.log_level)
+    let env_filter = tracing_subscriber::EnvFilter::new(&config.log_level);
+    let console_layer = tracing_subscriber::fmt::layer()
         .with_target(false)
-        .compact()
-        .init();
+        .compact();
+
+    if config.log_file.is_empty() {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(console_layer)
+            .init();
+    } else {
+        let file_appender = tracing_appender::rolling::weekly(
+            std::path::Path::new(&config.log_file).parent().unwrap_or(std::path::Path::new(".")),
+            std::path::Path::new(&config.log_file).file_name().unwrap_or(std::ffi::OsStr::new("app.log")),
+        );
+        let file_layer = tracing_subscriber::fmt::layer()
+            .with_ansi(false)
+            .with_target(false)
+            .with_writer(file_appender);
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(console_layer)
+            .with(file_layer)
+            .init();
+    }
 
     info!("日志级别: {}", config.log_level);
     info!("配置: {:?}", config);

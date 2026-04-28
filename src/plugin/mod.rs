@@ -4,10 +4,11 @@ mod pan666;
 mod panshushu;
 mod yunsou;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use async_trait::async_trait;
 use reqwest::Client;
+use tracing::info;
 
 use crate::model::SearchResult;
 
@@ -55,10 +56,17 @@ impl PluginRegistry {
             .plugins
             .iter()
             .map(|p| {
+                let name = p.name().to_string();
                 let p = Arc::clone(p);
                 let keyword = keyword.to_string();
                 let client = client.clone();
-                tokio::spawn(async move { p.search(&keyword, &client).await })
+                tokio::spawn(async move {
+                    let start = Instant::now();
+                    let results = p.search(&keyword, &client).await;
+                    let elapsed = start.elapsed();
+                    info!("插件 [{}] 完成，耗时 {:?}，结果 {} 条", name, elapsed, results.len());
+                    results
+                })
             })
             .collect();
 

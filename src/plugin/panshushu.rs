@@ -1,10 +1,7 @@
-use std::time::Instant;
-
 use async_trait::async_trait;
 use chrono::Utc;
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::debug;
 
 use crate::model::{Link, SearchResult};
 
@@ -40,7 +37,6 @@ impl SearchPlugin for PanshushuPlugin {
     }
 
     async fn search(&self, keyword: &str, client: &Client) -> Vec<SearchResult> {
-        let start_time = Instant::now();
         let url = format!(
             "{}?keyword={}&page=1&page_size=30&s=a1",
             API_URL,
@@ -62,8 +58,6 @@ impl SearchPlugin for PanshushuPlugin {
         };
 
         let now = Utc::now();
-        let end_time = Instant::now();
-        debug!("panshushu 搜索耗时: {:?}", end_time - start_time);
         data.items
             .into_iter()
             .enumerate()

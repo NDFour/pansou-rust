@@ -6,6 +6,7 @@ pub struct AppConfig {
     pub host: String,
     pub port: u16,
     pub log_level: String,
+    pub log_file: String,
     pub concurrency: usize,
     pub channels: Vec<String>,
 }
@@ -16,6 +17,7 @@ impl Default for AppConfig {
             host: "0.0.0.0".to_string(),
             port: 8888,
             log_level: "info".to_string(),
+            log_file: String::new(),
             concurrency: 3,
             channels: vec!["tgsearchers6".to_string()],
         }

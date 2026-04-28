@@ -7,6 +7,9 @@ channels:
   - bdbdndn11
   - yunpanx
 
-log_level: debug
+log_level: info
+# 日志文件路径，留空则不生成文件
+log_file: logs/app.log
+
 # 查询 tg 时的并发数
 concurrency: 2
