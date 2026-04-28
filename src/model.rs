@@ -29,14 +29,6 @@ pub struct ApiErrorResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct FilterConfig {
-    #[serde(default)]
-    pub include: Vec<String>,
-    #[serde(default)]
-    pub exclude: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SearchRequest {
     #[serde(rename = "kw")]
     pub keyword: String,
@@ -47,17 +39,15 @@ pub struct SearchRequest {
     #[serde(rename = "refresh", default)]
     pub force_refresh: bool,
     #[serde(rename = "res", default)]
-    pub result_type: String,
+    pub result_type: String, // all: 全部 (结果 + 按类型合并), results: 结果, 其它: 按类型合并
     #[serde(rename = "src", default)]
-    pub source_type: String,
+    pub source_type: String, // all: 全部 (tg + 插件), tg: tg, plugin: 插件
     #[serde(default)]
     pub plugins: Vec<String>,
     #[serde(default)]
     pub ext: HashMap<String, Value>,
     #[serde(rename = "cloud_types", default)]
     pub cloud_types: Vec<String>,
-    #[serde(default)]
-    pub filter: Option<FilterConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -75,16 +65,16 @@ pub struct Link {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResult {
     pub message_id: String,
-    pub unique_id: String,
-    pub channel: String,
-    pub datetime: DateTime<Utc>,
-    pub title: String,
-    pub content: String,
-    pub links: Vec<Link>,
+    pub unique_id: String, // 唯一标识，用于合并搜索结果
+    pub channel: String, // tg:xxx, plugin:插件的名字(如panshushu), unknown(默认)
+    pub datetime: DateTime<Utc>, // 发布时间
+    pub title: String, // 标题
+    pub content: String, // 内容
+    pub links: Vec<Link>, // 链接
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub tags: Vec<String>,
+    pub tags: Vec<String>, // 标签
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub images: Vec<String>,
+    pub images: Vec<String>, // 图片
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

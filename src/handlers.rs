@@ -17,7 +17,7 @@ pub async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
     let resp = json!({
         "status":"ok",
         "plugins_enabled": true,
-        "native_plugins": 4,
+        "native_plugins": 5,
         "channels_count": state.config.channels.len(),
         "channels": state.config.channels,
     });
@@ -89,9 +89,6 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
         .get("ext")
         .and_then(|v| serde_json::from_str::<HashMap<String, Value>>(v).ok())
         .unwrap_or_default();
-    let filter = q
-        .get("filter")
-        .and_then(|v| serde_json::from_str::<crate::model::FilterConfig>(v).ok());
 
     let mut req = SearchRequest {
         keyword,
@@ -106,8 +103,7 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
         source_type,
         plugins,
         ext,
-        cloud_types,
-        filter,
+        cloud_types
     };
     normalize_search_request(&mut req);
     req

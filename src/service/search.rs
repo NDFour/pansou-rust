@@ -4,44 +4,13 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
-use serde::Deserialize;
 use tracing::info;
 
 use crate::model::{
-    FilterConfig, Link, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
+    MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
 };
 
 use crate::plugin::PluginRegistry;
-
-#[derive(Debug, Deserialize)]
-struct PanshushuItem {
-    id: i64,
-    pwd: String,
-    title: String,
-    url: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct PanshushuData {
-    items: Vec<PanshushuItem>,
-    #[serde(default)]
-    page: i32,
-    #[serde(default)]
-    page_size: i32,
-    #[serde(default)]
-    total: i32,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct PanshushuResponse {
-    code: i32,
-    data: Option<PanshushuData>,
-    message: Option<String>,
-}
-
-const PRIORITY_KEYWORDS: [&str; 7] = ["合集", "系列", "全", "完", "最新", "附", "complete"];
 
 #[derive(Clone)]
 pub struct SearchService {
@@ -68,8 +37,11 @@ impl SearchService {
     /// 最终返回合并后的搜索结果
     pub async fn search(&self, req: &SearchRequest) -> SearchResponse {
         let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
+
+        info!("搜索 tg");
         let tg_results = if source_type == "all" || source_type == "tg" { self.search_tg(req).await } else { vec![] };
 
+        info!("搜索插件");
         // Native Rust plugins
         let native_plugin_results = if source_type == "all" || source_type == "plugin" {
             self.search_native_plugins(&req.keyword).await
@@ -77,27 +49,12 @@ impl SearchService {
             vec![]
         };
 
-        let panshushu_results = if source_type == "all" || source_type == "plugin" {
-            self.search_panshushu(&req.keyword).await
-        } else {
-            vec![]
-        };
-
+        info!("合并搜索结果: tg: {:?}, plugin: {:?}", tg_results.len(), native_plugin_results.len());
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
-        all_results = merge_search_results(all_results, panshushu_results);
         sort_results_by_time_and_keywords(&mut all_results);
 
-        let mut results_for_view = all_results
-            .iter()
-            .filter(|r| r.datetime.timestamp() > 0 || keyword_priority(&r.title) > 0 || plugin_level_from_result(r) <= 2)
-            .cloned()
-            .collect::<Vec<_>>();
-        let mut merged_by_type = merge_results_by_type(&all_results, &req.keyword, &req.cloud_types);
-
-        if let Some(filter) = &req.filter {
-            apply_result_filter(&mut results_for_view, &mut merged_by_type, filter, &req.result_type);
-        }
-
+        let results_for_view = all_results.clone();
+        let merged_by_type = merge_results_by_type(&all_results, &req.keyword, &req.cloud_types);
         let result_type = if req.result_type.is_empty() { "merged_by_type" } else { req.result_type.as_str() };
         match result_type {
             "all" => SearchResponse { total: results_for_view.len(), results: results_for_view, merged_by_type },
@@ -136,51 +93,6 @@ impl SearchService {
             .await
     }
 
-    async fn search_panshushu(&self, keyword: &str) -> Vec<SearchResult> {
-        let url = format!(
-            "https://www.panshushu.com/api/search?keyword={}&page=1&page_size=30&s=a1",
-            urlencoding(keyword)
-        );
-        let resp = match self.client.get(&url).send().await {
-            Ok(r) => r,
-            Err(_) => return vec![],
-        };
-        let body: PanshushuResponse = match resp.json().await {
-            Ok(b) => b,
-            Err(_) => return vec![],
-        };
-        if body.code != 200 {
-            return vec![];
-        }
-        let Some(data) = body.data else { return vec![]; };
-
-        let now = Utc::now();
-        data.items
-            .into_iter()
-            .enumerate()
-            .map(|(i, item)| {
-                let disk_type = link_type(&item.url);
-                let link = Link {
-                    disk_type,
-                    url: item.url,
-                    password: item.pwd.clone(),
-                    datetime: None,
-                    work_title: Some(item.title.clone()),
-                };
-                SearchResult {
-                    message_id: format!("panshushu_{}", item.id),
-                    unique_id: format!("panshushu_{}", item.id),
-                    channel: "panshushu".to_string(),
-                    datetime: now - chrono::Duration::seconds(i as i64),
-                    title: item.title,
-                    content: String::new(),
-                    links: vec![link],
-                    tags: vec![],
-                    images: vec![],
-                }
-            })
-            .collect()
-    }
 }
 
 fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
@@ -284,6 +196,7 @@ fn link_type(url: &str) -> String {
     "others".into()
 }
 
+/// 合并搜索结果，按照时间排序
 fn merge_search_results(existing: Vec<SearchResult>, new_results: Vec<SearchResult>) -> Vec<SearchResult> {
     let mut map = HashMap::<String, SearchResult>::new();
     for r in existing.into_iter().chain(new_results.into_iter()) {
@@ -301,6 +214,8 @@ fn merge_search_results(existing: Vec<SearchResult>, new_results: Vec<SearchResu
     merged
 }
 
+/// 完整性得分 = 唯一标识得分 + 链接得分 + 内容得分 + 标签得分 + 标题得分
+/// 信息越完整，得分越高
 fn completeness(r: &SearchResult) -> usize {
     let mut score = 0;
     if !r.unique_id.is_empty() { score += 10; }
@@ -313,33 +228,31 @@ fn sort_results_by_time_and_keywords(results: &mut [SearchResult]) {
     results.sort_by(|a, b| total_score(b).partial_cmp(&total_score(a)).unwrap_or(Ordering::Equal));
 }
 
+/// 总得分 = 时间得分 + 插件等级得分
 fn total_score(r: &SearchResult) -> f64 {
-    time_score(r.datetime) + keyword_priority(&r.title) as f64 + plugin_level_score(plugin_level_from_result(r)) as f64
+    time_score(r.datetime) + plugin_level_score(plugin_level_from_result(r)) as f64
 }
 
+/// 时间得分 = 发布时间与当前时间的差值
+/// 时间越近，得分越高
 fn time_score(datetime: DateTime<Utc>) -> f64 {
     let diff_days = (Utc::now() - datetime).num_hours() as f64 / 24.0;
     if diff_days <= 1.0 { 500.0 } else if diff_days <= 3.0 { 400.0 } else if diff_days <= 7.0 { 300.0 } else if diff_days <= 30.0 { 200.0 } else if diff_days <= 90.0 { 100.0 } else if diff_days <= 365.0 { 50.0 } else { 20.0 }
 }
 
-fn keyword_priority(title: &str) -> usize {
-    let lower = title.to_lowercase();
-    for (i, kw) in PRIORITY_KEYWORDS.iter().enumerate() {
-        if lower.contains(kw) {
-            return (PRIORITY_KEYWORDS.len() - i) * 70;
-        }
-    }
-    0
-}
-
-fn plugin_level_from_result(r: &SearchResult) -> i32 {
-    if !r.channel.is_empty() { 3 } else { 3 }
-}
-
+/// 插件等级得分 = 1: tg, 2: 插件, 3: 其他(默认)
+/// 插件等级越高，得分越高
 fn plugin_level_score(level: i32) -> i32 {
-    match level { 1 => 1000, 2 => 500, 4 => -200, _ => 0 }
+    match level { 1 => 500, 2 => 1000, _ => 0 }
 }
 
+/// 插件等级 = 1: tg, 2: 插件, 3: 其他(默认)
+/// 插件等级越高，得分越高
+fn plugin_level_from_result(r: &SearchResult) -> i32 {
+    if !r.channel.is_empty() { match r.channel.as_str() { "tg" => 1, "plugin" => 2, _ => 3 } } else { 3 }
+}
+
+/// 合并搜索结果 by 类型
 fn merge_results_by_type(results: &[SearchResult], keyword: &str, cloud_types: &[String]) -> MergedLinks {
     let mut unique = HashMap::<String, MergedLink>::new();
     let keyword_l = keyword.to_lowercase();
@@ -347,14 +260,16 @@ fn merge_results_by_type(results: &[SearchResult], keyword: &str, cloud_types: &
         for link in &r.links {
             let title = link.work_title.clone().unwrap_or_else(|| r.title.clone());
             if !keyword_l.is_empty() && !title.to_lowercase().contains(&keyword_l) {
+                // TODO 某些模糊搜索出来的结果可能不需要过滤
                 continue;
             }
+            // TODO 下面的 source 可能出现 plugin 吗？
             let ml = MergedLink {
                 url: link.url.clone(),
                 password: link.password.clone(),
                 note: title,
                 datetime: link.datetime.unwrap_or(r.datetime),
-                source: if !r.channel.is_empty() { Some(format!("tg:{}", r.channel)) } else { Some("unknown".to_string()) },
+                source: if !r.channel.is_empty() { Some(format!("{}", r.channel)) } else { Some("unknown".to_string()) },
                 images: r.images.clone(),
             };
             match unique.get(&link.url) {
@@ -383,52 +298,6 @@ fn merge_results_by_type(results: &[SearchResult], keyword: &str, cloud_types: &
         }
     }
     out
-}
-
-fn apply_result_filter(results: &mut Vec<SearchResult>, merged: &mut MergedLinks, filter: &FilterConfig, result_type: &str) {
-    let include = filter.include.iter().map(|s| s.to_lowercase()).collect::<Vec<_>>();
-    let exclude = filter.exclude.iter().map(|s| s.to_lowercase()).collect::<Vec<_>>();
-    if result_type == "merged_by_type" || result_type.is_empty() {
-        filter_merged(merged, &include, &exclude);
-        return;
-    }
-    let mut filtered_results = Vec::new();
-    for mut r in results.drain(..) {
-        if !match_filter(&r.title, &include, &exclude) {
-            continue;
-        }
-        r.links.retain(|l| {
-            let text = l.work_title.as_deref().unwrap_or(&r.title);
-            match_filter(text, &include, &exclude)
-        });
-        if !r.links.is_empty() {
-            filtered_results.push(r);
-        }
-    }
-    *results = filtered_results;
-    if result_type == "all" {
-        filter_merged(merged, &include, &exclude);
-    }
-}
-
-fn filter_merged(merged: &mut MergedLinks, include: &[String], exclude: &[String]) {
-    let keys = merged.keys().cloned().collect::<Vec<_>>();
-    for k in keys {
-        if let Some(v) = merged.get_mut(&k) {
-            v.retain(|l| match_filter(&l.note, include, exclude));
-            if v.is_empty() {
-                merged.remove(&k);
-            }
-        }
-    }
-}
-
-fn match_filter(text: &str, include: &[String], exclude: &[String]) -> bool {
-    let lower = text.to_lowercase();
-    if exclude.iter().any(|kw| lower.contains(kw)) {
-        return false;
-    }
-    include.is_empty() || include.iter().any(|kw| lower.contains(kw))
 }
 
 fn urlencoding(input: &str) -> String {

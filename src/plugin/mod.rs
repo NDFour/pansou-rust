@@ -1,6 +1,7 @@
 mod alupan;
 mod jikepan;
 mod pan666;
+mod panshushu;
 mod yunsou;
 
 use std::sync::Arc;
@@ -28,6 +29,7 @@ pub struct PluginRegistry {
 impl PluginRegistry {
     pub fn new() -> Self {
         let mut registry = Self { plugins: Vec::new() };
+        registry.register(Arc::new(panshushu::PanshushuPlugin));
         registry.register(Arc::new(jikepan::JikepanPlugin));
         registry.register(Arc::new(pan666::Pan666Plugin));
         registry.register(Arc::new(alupan::AlupanPlugin));
