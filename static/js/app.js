@@ -17,6 +17,7 @@ const state = {
   viewMode: 'list', // 'list' | 'merged'
   currentKeyword: '',
   currentFilters: {},
+  activeMergeType: '__all__',
 
   // Check state
   checkingAll: false,
@@ -276,13 +277,14 @@ async function performSearch() {
   }
 
   state.currentKeyword = keyword;
+  state.activeMergeType = '__all__';
   const filters = getActiveFilters();
 
   // Build search params
   const params = {
     keyword,
     sourceType: filters.sourceType || 'all',
-    resultType: state.viewMode === 'merged' ? 'merged_by_type' : 'list',
+    resultType: 'all',
   };
 
   if (filters.channel) {
@@ -377,34 +379,75 @@ function renderListResults(container, data) {
   bindResultEvents();
 }
 
+const TYPE_FRIENDLY = {
+  baidu: '百度网盘',
+  quark: '夸克网盘',
+  aliyun: '阿里云盘',
+  tianyi: '天翼云盘',
+  xunlei: '迅雷云盘',
+  '115': '115网盘',
+  '123': '123云盘',
+  uc: 'UC网盘',
+  mobile: '移动云盘',
+  magnet: '磁力链接',
+  ed2k: '电驴链接',
+};
+
 function renderMergedResults(container, data) {
   const merged = data.merged_by_type || {};
-  let html = '';
+  const types = Object.keys(merged);
+  if (types.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h3>未找到相关资源</h3>
+        <p>试试更换关键词或调整筛选条件</p>
+      </div>`;
+    return;
+  }
 
   let totalLinks = 0;
-  for (const [type, links] of Object.entries(merged)) {
+  for (const links of Object.values(merged)) {
     totalLinks += links.length;
   }
+
+  const activeType = state.activeMergeType || '__all__';
+
+  // Tab bar
+  let html = '<div class="type-tabs">';
+  html += `<button class="type-tab ${activeType === '__all__' ? 'active' : ''}" data-merge-type="__all__">全部<span class="type-tab-count">${totalLinks}</span></button>`;
+  for (const type of types) {
+    const count = merged[type].length;
+    const label = TYPE_FRIENDLY[type] || type;
+    html += `<button class="type-tab ${activeType === type ? 'active' : ''}" data-merge-type="${escapeHtml(type)}">${escapeHtml(label)}<span class="type-tab-count">${count}</span></button>`;
+  }
+  html += '</div>';
 
   if (totalLinks > 0) {
     html += renderCheckAllBar(totalLinks);
   }
 
-  for (const [type, links] of Object.entries(merged)) {
+  // Render active type results
+  const visibleTypes = activeType === '__all__' ? types : [activeType];
+  for (const type of visibleTypes) {
+    const links = merged[type];
+    if (!links || links.length === 0) continue;
+    const label = TYPE_FRIENDLY[type] || type;
+
     html += `<div class="merged-group">
-      <div class="merged-group-header">${escapeHtml(type)} <span class="tag tag-coral">${links.length}</span></div>`;
+      <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${links.length}</span></div>`;
 
     links.forEach((link) => {
       html += `
         <div class="merged-card" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
           <div class="result-card-header">
             <div>
-              <div class="link-url mb-sm">${escapeHtml(link.url)}</div>
+              <a class="link-url mb-sm" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="display:block;">${escapeHtml(link.url)}</a>
               ${link.password ? `<div class="link-password">密码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
               ${link.note ? `<div class="body-small text-stone mt-sm">${escapeHtml(link.note)}</div>` : ''}
             </div>
             <div class="flex flex-col items-center gap-xs">
-              <span class="tag">${escapeHtml(type)}</span>
+              <span class="tag">${escapeHtml(label)}</span>
               <span class="caption text-stone">${formatDate(link.datetime)}</span>
             </div>
           </div>
@@ -417,6 +460,16 @@ function renderMergedResults(container, data) {
 
   container.innerHTML = html;
   bindResultEvents();
+  bindMergeTabs();
+}
+
+function bindMergeTabs() {
+  document.querySelectorAll('.type-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      state.activeMergeType = tab.dataset.mergeType;
+      renderResults();
+    });
+  });
 }
 
 function renderResultCard(result) {
@@ -442,7 +495,7 @@ function renderResultCard(result) {
               (link) => `
             <tr data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
               <td><span class="link-type-badge">${escapeHtml(link.disk_type)}</span></td>
-              <td><span class="link-url">${escapeHtml(link.url)}</span></td>
+              <td><a class="link-url" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.url)}</a></td>
               <td>${link.password ? `<span class="link-password">${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></span>` : '<span class="text-stone">—</span>'}</td>
               <td><button class="btn btn-sm btn-secondary copy-btn" data-copy="${escapeHtml(link.url)}">复制链接</button></td>
             </tr>`

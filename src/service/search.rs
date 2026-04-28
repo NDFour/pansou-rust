@@ -4,10 +4,39 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
+use serde::Deserialize;
 
 use crate::model::{
-    FilterConfig, GoApiResponse, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
+    FilterConfig, GoApiResponse, Link, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
 };
+
+#[derive(Debug, Deserialize)]
+struct PanshushuItem {
+    id: i64,
+    pwd: String,
+    title: String,
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct PanshushuData {
+    items: Vec<PanshushuItem>,
+    #[serde(default)]
+    page: i32,
+    #[serde(default)]
+    page_size: i32,
+    #[serde(default)]
+    total: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct PanshushuResponse {
+    code: i32,
+    data: Option<PanshushuData>,
+    message: Option<String>,
+}
 
 const PRIORITY_KEYWORDS: [&str; 7] = ["合集", "系列", "全", "完", "最新", "附", "complete"];
 
@@ -36,8 +65,14 @@ impl SearchService {
         } else {
             vec![]
         };
+        let panshushu_results = if source_type == "all" || source_type == "plugin" {
+            self.search_panshushu(&req.keyword).await
+        } else {
+            vec![]
+        };
 
         let mut all_results = merge_search_results(tg_results, plugin_results);
+        all_results = merge_search_results(all_results, panshushu_results);
         sort_results_by_time_and_keywords(&mut all_results);
 
         let mut results_for_view = all_results
@@ -90,6 +125,51 @@ impl SearchService {
             return vec![];
         }
         wrapped.data.map(|d| d.results).unwrap_or_default()
+    }
+
+    async fn search_panshushu(&self, keyword: &str) -> Vec<SearchResult> {
+        let url = format!(
+            "https://www.panshushu.com/api/search?keyword={}&page=1&page_size=30&s=a1",
+            urlencoding(keyword)
+        );
+        let resp = match self.client.get(&url).send().await {
+            Ok(r) => r,
+            Err(_) => return vec![],
+        };
+        let body: PanshushuResponse = match resp.json().await {
+            Ok(b) => b,
+            Err(_) => return vec![],
+        };
+        if body.code != 200 {
+            return vec![];
+        }
+        let Some(data) = body.data else { return vec![]; };
+
+        let now = Utc::now();
+        data.items
+            .into_iter()
+            .map(|item| {
+                let disk_type = link_type(&item.url);
+                let link = Link {
+                    disk_type,
+                    url: item.url,
+                    password: item.pwd.clone(),
+                    datetime: None,
+                    work_title: Some(item.title.clone()),
+                };
+                SearchResult {
+                    message_id: format!("panshushu_{}", item.id),
+                    unique_id: format!("panshushu_{}", item.id),
+                    channel: "panshushu".to_string(),
+                    datetime: now,
+                    title: item.title,
+                    content: String::new(),
+                    links: vec![link],
+                    tags: vec![],
+                    images: vec![],
+                }
+            })
+            .collect()
     }
 }
 

@@ -866,6 +866,54 @@ code, .code {
 }
 
 /* --- Merged (by type) View --- */
+/* Type tabs (merged view) */
+.type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border-warm);
+}
+
+.type-tab {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-olive);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-2xl);
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.type-tab:hover {
+  color: var(--color-black);
+  background: var(--color-sand);
+}
+
+.type-tab.active {
+  background: var(--color-brand);
+  color: var(--color-ivory);
+}
+
+.type-tab-count {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 0 7px;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.type-tab:not(.active) .type-tab-count {
+  background: var(--color-border-cream);
+  color: var(--color-stone);
+}
+
 .merged-group {
   margin-bottom: var(--space-2xl);
 }
