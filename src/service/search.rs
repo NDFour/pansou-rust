@@ -148,7 +148,8 @@ impl SearchService {
         let now = Utc::now();
         data.items
             .into_iter()
-            .map(|item| {
+            .enumerate()
+            .map(|(i, item)| {
                 let disk_type = link_type(&item.url);
                 let link = Link {
                     disk_type,
@@ -161,7 +162,7 @@ impl SearchService {
                     message_id: format!("panshushu_{}", item.id),
                     unique_id: format!("panshushu_{}", item.id),
                     channel: "panshushu".to_string(),
-                    datetime: now,
+                    datetime: now - chrono::Duration::seconds(i as i64),
                     title: item.title,
                     content: String::new(),
                     links: vec![link],

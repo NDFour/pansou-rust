@@ -442,9 +442,9 @@ function renderMergedResults(container, data) {
         <div class="merged-card" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
           <div class="result-card-header">
             <div>
+              <div class="result-title" title="${escapeHtml(link.note || link.url)}">${escapeHtml(link.note || link.url)}</div>
               <a class="link-url mb-sm" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="display:block;">${escapeHtml(link.url)}</a>
               ${link.password ? `<div class="link-password">密码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
-              ${link.note ? `<div class="body-small text-stone mt-sm">${escapeHtml(link.note)}</div>` : ''}
             </div>
             <div class="flex flex-col items-center gap-xs">
               <span class="tag">${escapeHtml(label)}</span>
@@ -530,7 +530,7 @@ function renderResultCard(result) {
     <div class="result-card">
       <div class="result-card-header">
         <div>
-          <div class="result-title">${escapeHtml(result.title || '无标题')}</div>
+          <div class="result-title" title="${escapeHtml(result.title || '无标题')}">${escapeHtml(result.title || '无标题')}</div>
           <div class="result-meta">
             <span class="result-channel">${escapeHtml(result.channel)}</span>
             <span class="result-meta-item">${formatDate(result.datetime)}</span>

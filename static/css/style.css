@@ -716,6 +716,15 @@ code, .code {
   line-height: 1.30;
   color: var(--color-black);
   margin-bottom: var(--space-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.result-card-header > div:first-child {
+  min-width: 0;
+  flex: 1;
 }
 
 .result-title a {
