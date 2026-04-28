@@ -475,16 +475,18 @@ function renderResultCard(result) {
 }
 
 function renderCheckAllBar(totalLinks) {
-  return `
-    <div class="check-all-bar" id="check-all-bar">
-      <span class="body-small text-olive">共 ${totalLinks} 个链接</span>
-      <div class="flex items-center gap-md">
-        <span id="check-progress" class="check-progress hidden"></span>
-        <button class="btn btn-secondary btn-sm" id="check-all-btn" onclick="checkAllLinks()">
-          🔗 检测全部链接状态
-        </button>
-      </div>
-    </div>`;
+  return '';
+  // 临时不启用，后续会使用
+  // return `
+  //   <div class="check-all-bar" id="check-all-bar">
+  //     <span class="body-small text-olive">共 ${totalLinks} 个链接</span>
+  //     <div class="flex items-center gap-md">
+  //       <span id="check-progress" class="check-progress hidden"></span>
+  //       <button class="btn btn-secondary btn-sm" id="check-all-btn" onclick="checkAllLinks()">
+  //         🔗 检测全部链接状态
+  //       </button>
+  //     </div>
+  //   </div>`;
 }
 
 /* ============================================================
