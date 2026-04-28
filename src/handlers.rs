@@ -93,7 +93,8 @@ pub async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
     let resp = json!({
         "status":"ok",
         "auth_enabled": state.config.auth_enabled,
-        "plugins_enabled": false,
+        "plugins_enabled": true,
+        "native_plugins": 4,
         "go_compat_enabled": state.config.go_compat_url.is_some(),
         "channels_count": state.config.channels.len(),
         "channels": state.config.channels,

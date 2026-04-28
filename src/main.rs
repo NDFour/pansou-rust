@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod handlers;
 mod model;
+mod plugin;
 mod service;
 
 use std::sync::Arc;

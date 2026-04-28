@@ -283,23 +283,6 @@ code, .code {
   font-size: 0.875rem;
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xl);
-  list-style: none;
-}
-
-.nav-links a {
-  font-size: 0.9375rem;
-  color: var(--color-olive);
-  transition: color 0.2s ease;
-}
-
-.nav-links a:hover {
-  color: var(--color-black);
-}
-
 .nav-auth {
   display: flex;
   align-items: center;
@@ -1185,46 +1168,6 @@ code, .code {
   text-align: center;
 }
 
-/* --- Pagination --- */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  margin-top: var(--space-2xl);
-}
-
-.pagination-btn {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  color: var(--color-charcoal);
-  background: var(--color-sand);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: var(--color-border-warm);
-}
-
-.pagination-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pagination-btn.active {
-  background: var(--color-brand);
-  color: var(--color-ivory);
-}
-
-.pagination-info {
-  font-size: 0.875rem;
-  color: var(--color-stone);
-}
-
 /* --- Check All Button --- */
 .check-all-bar {
   display: flex;
@@ -1289,10 +1232,6 @@ code, .code {
     height: 48px;
   }
 
-  .nav-links {
-    gap: var(--space-lg);
-  }
-
   .filter-bar {
     flex-direction: column;
     align-items: flex-start;
@@ -1345,10 +1284,6 @@ code, .code {
 
   .hero {
     padding: var(--space-2xl) 0;
-  }
-
-  .nav-links {
-    display: none;
   }
 
   .result-card {

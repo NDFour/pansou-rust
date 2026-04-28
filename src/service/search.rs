@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::{HashMap, HashSet}, time::Duration};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}, sync::Arc, time::Duration};
 
 use chrono::{DateTime, Utc};
 use regex::Regex;
@@ -9,6 +9,8 @@ use serde::Deserialize;
 use crate::model::{
     FilterConfig, GoApiResponse, Link, MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
 };
+
+use crate::plugin::PluginRegistry;
 
 #[derive(Debug, Deserialize)]
 struct PanshushuItem {
@@ -44,6 +46,7 @@ const PRIORITY_KEYWORDS: [&str; 7] = ["合集", "系列", "全", "完", "最新"
 pub struct SearchService {
     client: Client,
     go_compat_url: Option<String>,
+    plugin_registry: Arc<PluginRegistry>,
 }
 
 impl SearchService {
@@ -54,24 +57,39 @@ impl SearchService {
             .user_agent("Mozilla/5.0 pansou-rust")
             .build()
             .unwrap_or_else(|_| Client::new());
-        Self { client, go_compat_url }
+        Self {
+            client,
+            go_compat_url,
+            plugin_registry: Arc::new(PluginRegistry::new()),
+        }
     }
 
     pub async fn search(&self, req: &SearchRequest) -> SearchResponse {
         let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
         let tg_results = if source_type == "all" || source_type == "tg" { self.search_tg(req).await } else { vec![] };
-        let plugin_results = if (source_type == "all" || source_type == "plugin") && self.go_compat_url.is_some() {
+
+        // Native Rust plugins
+        let native_plugin_results = if source_type == "all" || source_type == "plugin" {
+            self.search_native_plugins(&req.keyword).await
+        } else {
+            vec![]
+        };
+
+        // Go bridge fallback (for plugins not yet migrated to Rust)
+        let go_bridge_results = if (source_type == "all" || source_type == "plugin") && self.go_compat_url.is_some() {
             self.search_plugins_by_go_bridge(req).await
         } else {
             vec![]
         };
+
         let panshushu_results = if source_type == "all" || source_type == "plugin" {
             self.search_panshushu(&req.keyword).await
         } else {
             vec![]
         };
 
-        let mut all_results = merge_search_results(tg_results, plugin_results);
+        let mut all_results = merge_search_results(tg_results, native_plugin_results);
+        all_results = merge_search_results(all_results, go_bridge_results);
         all_results = merge_search_results(all_results, panshushu_results);
         sort_results_by_time_and_keywords(&mut all_results);
 
@@ -109,6 +127,18 @@ impl SearchService {
             }
         }
         out
+    }
+
+    async fn search_native_plugins(&self, keyword: &str) -> Vec<SearchResult> {
+        let plugin_client = Client::builder()
+            .connect_timeout(Duration::from_secs(8))
+            .timeout(Duration::from_secs(30))
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .build()
+            .unwrap_or_else(|_| Client::new());
+        self.plugin_registry
+            .search_all(keyword, &plugin_client)
+            .await
     }
 
     async fn search_plugins_by_go_bridge(&self, req: &SearchRequest) -> Vec<SearchResult> {

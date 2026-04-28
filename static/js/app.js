@@ -331,7 +331,6 @@ function renderResults() {
       <div class="empty-state">
         <div class="empty-state-icon">🔍</div>
         <h3>输入关键词开始搜索</h3>
-        <p>搜索 TG 频道和云盘资源，获取网盘链接</p>
       </div>
     `;
     if (countEl) countEl.textContent = '';
@@ -348,7 +347,6 @@ function renderResults() {
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
         <h3>未找到相关资源</h3>
-        <p>试试更换关键词或调整筛选条件</p>
       </div>
     `;
     return;
@@ -401,7 +399,6 @@ function renderMergedResults(container, data) {
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
         <h3>未找到相关资源</h3>
-        <p>试试更换关键词或调整筛选条件</p>
       </div>`;
     return;
   }
@@ -444,7 +441,7 @@ function renderMergedResults(container, data) {
             <div>
               <div class="result-title" title="${escapeHtml(link.note || link.url)}">${escapeHtml(link.note || link.url)}</div>
               <a class="link-url mb-sm" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="display:block;">${escapeHtml(link.url)}</a>
-              ${link.password ? `<div class="link-password">密码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
+              ${link.password ? `<div class="link-password">提取码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
             </div>
             <div class="flex flex-col items-center gap-xs">
               <span class="tag">${escapeHtml(label)}</span>
@@ -485,7 +482,7 @@ function renderResultCard(result) {
           <tr>
             <th>类型</th>
             <th>链接</th>
-            <th>密码</th>
+            <th>提取码</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -534,7 +531,6 @@ function renderResultCard(result) {
           <div class="result-meta">
             <span class="result-channel">${escapeHtml(result.channel)}</span>
             <span class="result-meta-item">${formatDate(result.datetime)}</span>
-            <span class="result-meta-item">${result.message_id}</span>
           </div>
         </div>
       </div>

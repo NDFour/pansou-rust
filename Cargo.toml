@@ -18,3 +18,5 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 scraper = "0.23"
 regex = "1"
 url = "2"
+async-trait = "0.1"
+rand = "0.8"
