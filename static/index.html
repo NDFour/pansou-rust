@@ -41,20 +41,11 @@
         </div>
 
         <!-- Filter Bar -->
-        <div class="filter-bar">
+        <div class="filter-bar" id="filter-bar">
           <div class="filter-group">
-            <span class="filter-group-label">数据源</span>
-            <button class="filter-chip active" data-filter-group="sourceType" data-filter-value="all">全部</button>
+            <button class="filter-chip active" data-filter-group="sourceType" data-filter-value="all">全部（默认）</button>
             <button class="filter-chip" data-filter-group="sourceType" data-filter-value="tg">TG频道</button>
-            <button class="filter-chip" data-filter-group="sourceType" data-filter-value="plugin">插件</button>
-          </div>
-
-          <div class="filter-group">
-            <span class="filter-group-label">频道</span>
-            <button class="filter-chip active" data-filter-group="channel" data-filter-value="">全部</button>
-            <button class="filter-chip" data-filter-group="channel" data-filter-value="tgsearchers6">TG搜索</button>
-            <button class="filter-chip" data-filter-group="channel" data-filter-value="yunpanpan">云盘盘</button>
-            <button class="filter-chip" data-filter-group="channel" data-filter-value="zhao_source">赵资源</button>
+            <button class="filter-chip" data-filter-group="sourceType" data-filter-value="plugin">网盘</button>
           </div>
         </div>
       </div>
@@ -81,6 +72,45 @@
 
     </div>
   </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand-col">
+          <a href="/" class="footer-brand">
+            <span class="nav-brand-icon">盘</span>
+            PanSou
+          </a>
+          <p class="footer-desc">开源云盘资源搜索引擎<br>聚合 TG 频道与第三方插件，快速发现网盘资源。</p>
+        </div>
+
+        <div class="footer-links-col">
+          <div class="footer-link-group">
+            <h4 class="footer-heading">项目</h4>
+            <a href="https://github.com/techguide-yb/pansou-rust" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+          </div>
+          <div class="footer-link-group">
+            <h4 class="footer-heading">联系我们</h4>
+            <a href="mailto:admin@pansou.example.com" class="footer-link">admin@pansou.example.com</a>
+          </div>
+        </div>
+
+        <div class="footer-links-col">
+          <div class="footer-link-group">
+            <h4 class="footer-heading">友情链接</h4>
+            <a href="https://jikepan.xyz" target="_blank" rel="noopener noreferrer" class="footer-link">极客盘</a>
+            <a href="https://www.panshushu.com" target="_blank" rel="noopener noreferrer" class="footer-link">盘搜搜</a>
+            <a href="https://pan666.net" target="_blank" rel="noopener noreferrer" class="footer-link">Pan666</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 PanSou &nbsp;&middot;&nbsp; Open source under MIT License</p>
+      </div>
+    </div>
+  </footer>
 
   <script src="/static/js/app.js"></script>
 </body>

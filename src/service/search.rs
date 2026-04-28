@@ -259,15 +259,9 @@ fn plugin_level_from_result(r: &SearchResult) -> i32 {
 /// 合并搜索结果 by 类型
 fn merge_results_by_type(results: &[SearchResult], keyword: &str, cloud_types: &[String]) -> MergedLinks {
     let mut unique = HashMap::<String, MergedLink>::new();
-    let keyword_l = keyword.to_lowercase();
     for r in results {
         for link in &r.links {
             let title = link.work_title.clone().unwrap_or_else(|| r.title.clone());
-            if !keyword_l.is_empty() && !title.to_lowercase().contains(&keyword_l) {
-                // TODO 某些模糊搜索出来的结果可能不需要过滤
-                continue;
-            }
-            // TODO 下面的 source 可能出现 plugin 吗？
             let ml = MergedLink {
                 url: link.url.clone(),
                 password: link.password.clone(),

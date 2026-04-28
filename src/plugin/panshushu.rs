@@ -70,7 +70,7 @@ impl SearchPlugin for PanshushuPlugin {
                     channel: "panshushu".to_string(),
                     datetime: now - chrono::Duration::seconds(i as i64),
                     title: title.clone(),
-                    content: title.clone(),
+                    content: String::new(),
                     links: vec![Link {
                         disk_type,
                         url: item.url,

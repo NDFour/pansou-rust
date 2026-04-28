@@ -121,10 +121,17 @@ const Toast = {
 /* ============================================================
    Search UI
    ============================================================ */
+
+const CHANNEL_FRIENDLY = {
+  tgsearchers6: 'TG搜索',
+  yunpanpan: '云盘盘',
+  zhao_source: '赵资源',
+};
+
 function initSearchPage() {
   const searchInput = document.getElementById('search-input');
   const searchBtn = document.getElementById('search-btn');
-  const filterChips = document.querySelectorAll('.filter-chip');
+  const filterBar = document.getElementById('filter-bar');
   const viewTabs = document.querySelectorAll('.view-tab');
 
   // Search trigger
@@ -137,21 +144,21 @@ function initSearchPage() {
     });
   }
 
-  // Filter chips
-  filterChips.forEach((chip) => {
-    chip.addEventListener('click', () => {
+  // Filter chips — event delegation
+  if (filterBar) {
+    filterBar.addEventListener('click', (e) => {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
       const group = chip.dataset.filterGroup;
       if (!group) return;
 
-      // Toggle active in same group
-      const siblings = document.querySelectorAll(`.filter-chip[data-filter-group="${group}"]`);
+      const siblings = filterBar.querySelectorAll(`.filter-chip[data-filter-group="${CSS.escape(group)}"]`);
       siblings.forEach((s) => s.classList.remove('active'));
       chip.classList.add('active');
 
-      // Re-run search if keyword present
       if (state.currentKeyword) performSearch();
     });
-  });
+  }
 
   // View mode tabs
   viewTabs.forEach((tab) => {
@@ -162,6 +169,23 @@ function initSearchPage() {
       renderResults();
     });
   });
+}
+
+async function loadChannels() {
+  const container = document.getElementById('channel-chips');
+  if (!container) return;
+
+  try {
+    const health = await api.health();
+    const channels = health.channels || [];
+
+    container.innerHTML = channels.map((ch) => {
+      const label = CHANNEL_FRIENDLY[ch] || ch;
+      return `<button class="filter-chip" data-filter-group="channel" data-filter-value="${escapeHtml(ch)}" title="${escapeHtml(ch)}">${escapeHtml(label)}</button>`;
+    }).join('');
+  } catch {
+    // channels will fall back to config defaults
+  }
 }
 
 function getActiveFilters() {
@@ -649,9 +673,10 @@ function bindResultEvents() {
 /* ============================================================
    Init
    ============================================================ */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Init search if on search page
   if (document.getElementById('search-input')) {
     initSearchPage();
+    await loadChannels();
   }
 });

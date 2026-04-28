@@ -40,7 +40,7 @@ pub struct SearchRequest {
     pub force_refresh: bool,
     #[serde(rename = "res", default)]
     pub result_type: String, // all: 全部 (结果 + 按类型合并), results: 结果, 其它: 按类型合并
-    #[serde(rename = "src", default)]
+    #[serde(rename = "src", default)] // all: 全部 (tg + 插件), tg: tg, plugin: 插件
     pub source_type: String, // all: 全部 (tg + 插件), tg: tg, plugin: 插件
     #[serde(default)]
     pub plugins: Vec<String>,
