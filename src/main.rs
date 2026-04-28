@@ -19,9 +19,10 @@ use tower_http::{
     services::ServeDir,
     trace::TraceLayer,
 };
-use tracing::info;
+use tracing::{info, info_span};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -84,7 +85,12 @@ async fn main() -> anyhow::Result<()> {
 
     let app = api_router
         .layer(CompressionLayer::new())
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|_request: &axum::http::Request<_>| {
+                let request_id = Uuid::new_v4().simple().to_string();
+                info_span!("request", %request_id)
+            }),
+        )
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
