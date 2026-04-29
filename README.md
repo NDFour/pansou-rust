@@ -8,6 +8,19 @@ PanSou 的 Rust 后端版本，提供 TG 频道搜索与网盘资源搜索聚合
 - `POST /api/check/links` — 批量链接有效性检测
 - `GET /api/health` — 健康检查
 
+## 构建
+
+```bash
+cargo build --release
+```
+
+编译产物位于 `target/release/pansou-rust`。
+
+- Linux 静态链接：`cargo build --release --target x86_64-unknown-linux-musl`（需安装 `musl-tools`）
+- ARM64 交叉编译：使用 [`cross`](https://github.com/cross-rs/cross) 工具
+
+推送 `v*` 标签时，GitHub Actions 自动构建多平台二进制文件并发布 Release。
+
 ## 运行
 
 ```bash

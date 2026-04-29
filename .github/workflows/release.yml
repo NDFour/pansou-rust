@@ -1,0 +1,90 @@
+name: 发布版本
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact: pansou-linux-amd64
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact: pansou-linux-arm64
+            use-cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            artifact: pansou-darwin-amd64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            artifact: pansou-darwin-arm64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: pansou-windows-amd64.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: 安装 musl-tools (Linux)
+        if: contains(matrix.target, 'linux-musl') && !matrix.use-cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: 安装 cross (Linux ARM64)
+        if: matrix.use-cross
+        run: cargo install cross --locked
+
+      - name: 编译 (cargo)
+        if: "!matrix.use-cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: 编译 (cross)
+        if: matrix.use-cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: 重命名产物
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.target }}/release/pansou-rust.exe "${{ matrix.artifact }}"
+          else
+            cp target/${{ matrix.target }}/release/pansou-rust "${{ matrix.artifact }}"
+          fi
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
