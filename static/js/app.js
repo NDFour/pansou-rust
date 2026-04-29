@@ -15,6 +15,12 @@ const state = {
   currentFilters: {},
   activeMergeType: '__all__',
 
+  // Pagination
+  listPage: 1,
+  mergedPage: 1,
+  pageSize: 20,
+  mergedPageSize: 20,
+
   // Check state
   checkingAll: false,
 };
@@ -58,7 +64,6 @@ const api = {
       channels: params.channels || [],
       conc: params.concurrency || 0,
       refresh: params.forceRefresh || false,
-      res: params.resultType || 'merged_by_type',
       src: params.sourceType || 'all',
       plugins: params.plugins || [],
       cloud_types: params.cloudTypes || [],
@@ -170,6 +175,8 @@ function initSearchPage() {
       viewTabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
       state.viewMode = tab.dataset.view;
+      state.listPage = 1;
+      state.mergedPage = 1;
 
       const container = document.getElementById('results-container');
       if (container) {
@@ -220,13 +227,14 @@ async function performSearch() {
 
   state.currentKeyword = keyword;
   state.activeMergeType = '__all__';
+  state.listPage = 1;
+  state.mergedPage = 1;
   const filters = getActiveFilters();
 
   // Build search params
   const params = {
     keyword,
     sourceType: filters.sourceType || 'all',
-    resultType: 'all',
   };
 
   if (filters.channel) {
@@ -286,6 +294,56 @@ async function performSearch() {
 /* ============================================================
    Results Rendering
    ============================================================ */
+
+function mergeByType(results) {
+  const merged = {};
+  const seen = new Set();
+
+  results.forEach((result) => {
+    (result.links || []).forEach((link) => {
+      const key = link.url;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const type = link.disk_type || 'other';
+      if (!merged[type]) merged[type] = [];
+
+      merged[type].push({
+        url: link.url,
+        password: link.password || '',
+        note: result.title || link.url,
+        datetime: link.datetime || result.datetime,
+        source: result.channel || 'unknown',
+        images: result.images || [],
+      });
+    });
+  });
+
+  return merged;
+}
+
+function paginate(items, page, pageSize) {
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    pageItems: items.slice(start, end),
+    totalPages: Math.max(1, Math.ceil(items.length / pageSize)),
+    hasPrev: page > 1,
+    hasNext: page < Math.ceil(items.length / pageSize),
+  };
+}
+
+function renderPagination(page, totalPages, hasPrev, hasNext) {
+  if (totalPages <= 1) return '';
+
+  return `
+    <div class="pagination">
+      <button class="pagination-btn" data-action="prev" ${hasPrev ? '' : 'disabled'}>← 上一页</button>
+      <span class="pagination-info">第 ${page}/${totalPages} 页</span>
+      <button class="pagination-btn" data-action="next" ${hasNext ? '' : 'disabled'}>下一页 →</button>
+    </div>`;
+}
+
 function renderResults() {
   const container = document.getElementById('results-container');
   const countEl = document.getElementById('results-count');
@@ -318,7 +376,7 @@ function renderResults() {
     return;
   }
 
-  if (state.viewMode === 'merged' && data.merged_by_type) {
+  if (state.viewMode === 'merged') {
     renderMergedResults(container, data);
   } else {
     renderListResults(container, data);
@@ -330,20 +388,25 @@ function renderResults() {
 
 function renderListResults(container, data) {
   const results = data.results || [];
+  const { pageItems, totalPages, hasPrev, hasNext } = paginate(results, state.listPage, state.pageSize);
+
   let html = '';
 
-  results.forEach((result, i) => {
+  // Check all bar
+  const totalLinks = results.reduce((sum, r) => sum + (r.links?.length || 0), 0);
+  if (totalLinks > 0) {
+    html += renderCheckAllBar(totalLinks);
+  }
+
+  pageItems.forEach((result, i) => {
     html += renderResultCard(result, i);
   });
 
-  // Check all bar if there are links
-  const totalLinks = results.reduce((sum, r) => sum + (r.links?.length || 0), 0);
-  if (totalLinks > 0) {
-    html = renderCheckAllBar(totalLinks) + html;
-  }
+  html += renderPagination(state.listPage, totalPages, hasPrev, hasNext);
 
   container.innerHTML = html;
   bindResultEvents();
+  bindPaginationEvents('list');
 }
 
 const TYPE_FRIENDLY = {
@@ -361,17 +424,18 @@ const TYPE_FRIENDLY = {
 };
 
 function renderMergedResults(container, data) {
-  const merged = data.merged_by_type || {};
+  const merged = mergeByType(data.results || []);
   const types = Object.keys(merged);
   if (types.length === 0) {
     container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
+      <div class="empty-state empty-state-entrance">
+        <div class="empty-state-icon animated">📭</div>
         <h3>未找到相关资源</h3>
       </div>`;
     return;
   }
 
+  // Calculate total links
   let totalLinks = 0;
   for (const links of Object.values(merged)) {
     totalLinks += links.length;
@@ -393,48 +457,112 @@ function renderMergedResults(container, data) {
     html += renderCheckAllBar(totalLinks);
   }
 
-  // Render active type results
-  const visibleTypes = activeType === '__all__' ? types : [activeType];
-  for (const type of visibleTypes) {
-    const links = merged[type];
-    if (!links || links.length === 0) continue;
-    const label = TYPE_FRIENDLY[type] || type;
+  // Collect visible links and paginate
+  let visibleLinks = [];
+  if (activeType === '__all__') {
+    for (const type of types) {
+      merged[type].forEach((link) => {
+        visibleLinks.push({ ...link, _type: type });
+      });
+    }
+    // Sort by datetime descending
+    visibleLinks.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+  } else {
+    visibleLinks = (merged[activeType] || []).map((link) => ({ ...link, _type: activeType }));
+  }
 
-    html += `<div class="merged-group">
-      <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${links.length}</span></div>`;
+  const { pageItems, totalPages, hasPrev, hasNext } = paginate(visibleLinks, state.mergedPage, state.mergedPageSize);
 
-    links.forEach((link, i) => {
-      const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
-      html += `
-        <div class="merged-card merged-card-entrance ${delayClass}" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
-          <div class="result-card-header">
-            <div>
-              <div class="result-title" title="${escapeHtml(link.note || link.url)}">${escapeHtml(link.note || link.url)}</div>
-              <a class="link-url mb-sm" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="display:block;">${escapeHtml(link.url)}</a>
-              ${link.password ? `<div class="link-password">提取码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
-            </div>
-            <div class="flex flex-col items-center gap-xs">
-              <span class="tag">${escapeHtml(label)}</span>
-              <span class="caption text-stone">${formatDate(link.datetime)}</span>
-            </div>
-          </div>
-          ${link.images?.length ? `<div class="flex gap-sm mt-sm">${link.images.map(img => `<img src="${escapeHtml(img)}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:var(--radius-sm)" loading="lazy">`).join('')}</div>` : ''}
-        </div>`;
+  if (activeType === '__all__') {
+    // Group paginated items by type for display
+    const grouped = {};
+    pageItems.forEach((link) => {
+      const t = link._type;
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(link);
     });
 
-    html += '</div>';
+    for (const type of Object.keys(grouped)) {
+      const links = grouped[type];
+      const label = TYPE_FRIENDLY[type] || type;
+      html += `<div class="merged-group">
+        <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${links.length}</span></div>`;
+
+      links.forEach((link, i) => {
+        const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
+        html += renderMergedCard(link, label, delayClass);
+      });
+
+      html += '</div>';
+    }
+  } else {
+    if (pageItems.length > 0) {
+      const label = TYPE_FRIENDLY[activeType] || activeType;
+      html += `<div class="merged-group">
+        <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${pageItems.length}</span></div>`;
+
+      pageItems.forEach((link, i) => {
+        const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
+        html += renderMergedCard(link, label, delayClass);
+      });
+
+      html += '</div>';
+    }
   }
+
+  html += renderPagination(state.mergedPage, totalPages, hasPrev, hasNext);
 
   container.innerHTML = html;
   bindResultEvents();
   bindMergeTabs();
+  bindPaginationEvents('merged');
+}
+
+function renderMergedCard(link, label, delayClass) {
+  return `
+    <div class="merged-card merged-card-entrance ${delayClass}" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
+      <div class="result-card-header">
+        <div>
+          <div class="result-title" title="${escapeHtml(link.note || link.url)}">${escapeHtml(link.note || link.url)}</div>
+          <a class="link-url mb-sm" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="display:block;">${escapeHtml(link.url)}</a>
+          ${link.password ? `<div class="link-password">提取码: ${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></div>` : ''}
+        </div>
+        <div class="flex flex-col items-center gap-xs">
+          <span class="tag">${escapeHtml(label)}</span>
+          <span class="caption text-stone">${formatDate(link.datetime)}</span>
+        </div>
+      </div>
+      ${link.images?.length ? `<div class="flex gap-sm mt-sm">${link.images.map(img => `<img src="${escapeHtml(img)}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:var(--radius-sm)" loading="lazy">`).join('')}</div>` : ''}
+    </div>`;
 }
 
 function bindMergeTabs() {
   document.querySelectorAll('.type-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       state.activeMergeType = tab.dataset.mergeType;
+      state.mergedPage = 1;
       renderResults();
+    });
+  });
+}
+
+function bindPaginationEvents(viewMode) {
+  document.querySelectorAll('.pagination-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (viewMode === 'list') {
+        if (action === 'prev' && state.listPage > 1) state.listPage--;
+        if (action === 'next') state.listPage++;
+      } else {
+        if (action === 'prev' && state.mergedPage > 1) state.mergedPage--;
+        if (action === 'next') state.mergedPage++;
+      }
+
+      const container = document.getElementById('results-container');
+      if (container) {
+        container.classList.add('switching');
+        requestAnimationFrame(() => { renderResults(); });
+      }
     });
   });
 }

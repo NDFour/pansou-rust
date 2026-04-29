@@ -11,9 +11,7 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use tracing::info;
 
-use crate::model::{
-    MergedLink, MergedLinks, SearchRequest, SearchResponse, SearchResult,
-};
+use crate::model::{SearchRequest, SearchResponse, SearchResult};
 
 use crate::plugin::PluginRegistry;
 
@@ -77,17 +75,8 @@ impl SearchService {
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
         sort_results_by_time_and_keywords(&mut all_results);
 
-        let results_for_view = all_results.clone();
-        let merged_by_type = merge_results_by_type(&all_results, &req.keyword, &req.cloud_types);
-        let result_type = if req.result_type.is_empty() { "merged_by_type" } else { req.result_type.as_str() };
-        let response = match result_type {
-            "all" => SearchResponse { total: results_for_view.len(), cache_hit: false, results: results_for_view, merged_by_type },
-            "results" => SearchResponse { total: results_for_view.len(), cache_hit: false, results: results_for_view, merged_by_type: HashMap::new() },
-            _ => {
-                let total = merged_by_type.values().map(Vec::len).sum::<usize>();
-                SearchResponse { total, cache_hit: false, results: vec![], merged_by_type }
-            }
-        };
+        let total = all_results.len();
+        let response = SearchResponse { total, cache_hit: false, results: all_results };
 
         // 缓存结果
         let cache_key = search_cache_key(req);
@@ -304,62 +293,19 @@ fn plugin_level_from_result(r: &SearchResult) -> i32 {
     if !r.channel.is_empty() { match r.channel.as_str() { "tg" => 1, "plugin" => 2, _ => 3 } } else { 3 }
 }
 
-/// 合并搜索结果 by 类型
-fn merge_results_by_type(results: &[SearchResult], keyword: &str, cloud_types: &[String]) -> MergedLinks {
-    let mut unique = HashMap::<String, MergedLink>::new();
-    for r in results {
-        for link in &r.links {
-            let title = link.work_title.clone().unwrap_or_else(|| r.title.clone());
-            let ml = MergedLink {
-                url: link.url.clone(),
-                password: link.password.clone(),
-                note: title,
-                datetime: link.datetime.unwrap_or(r.datetime),
-                source: if !r.channel.is_empty() { Some(format!("{}", r.channel)) } else { Some("unknown".to_string()) },
-                images: r.images.clone(),
-            };
-            match unique.get(&link.url) {
-                Some(old) if old.datetime >= ml.datetime => {}
-                _ => {
-                    unique.insert(link.url.clone(), ml);
-                }
-            }
-        }
-    }
-
-    let allow: HashSet<String> = cloud_types.iter().map(|s| s.to_lowercase()).collect();
-    let mut out: MergedLinks = HashMap::new();
-    for r in results {
-        for link in &r.links {
-            if let Some(ml) = unique.get(&link.url) {
-                let t = link.disk_type.clone();
-                if !allow.is_empty() && !allow.contains(&t.to_lowercase()) {
-                    continue;
-                }
-                let bucket = out.entry(t).or_default();
-                if !bucket.iter().any(|e| e.url == ml.url) {
-                    bucket.push(ml.clone());
-                }
-            }
-        }
-    }
-    out
-}
-
 fn urlencoding(input: &str) -> String {
     url::form_urlencoded::byte_serialize(input.as_bytes()).collect()
 }
 
 fn search_cache_key(req: &SearchRequest) -> String {
     let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
-    let result_type = if req.result_type.is_empty() { "merged_by_type" } else { req.result_type.as_str() };
     let mut cloud_types = req.cloud_types.clone();
     cloud_types.sort();
     let mut channels = req.channels.clone();
     channels.sort();
     format!(
-        "kw={}|src={}|res={}|cloud={:?}|ch={:?}",
-        req.keyword, source_type, result_type, cloud_types, channels
+        "kw={}|src={}|cloud={:?}|ch={:?}",
+        req.keyword, source_type, cloud_types, channels
     )
 }
 
@@ -617,29 +563,6 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_results_by_type_groups_correctly() {
-        let r = make_result("id1", "tg", "title", "content", vec![
-            make_link("baidu", "http://baidu.com/test"),
-            make_link("quark", "http://quark.cn/test"),
-        ], 1);
-        let merged = merge_results_by_type(&[r], "keyword", &[]);
-        assert!(merged.contains_key("baidu"));
-        assert!(merged.contains_key("quark"));
-        assert_eq!(merged["baidu"].len(), 1);
-    }
-
-    #[test]
-    fn test_merge_results_by_type_filters_cloud_types() {
-        let r = make_result("id1", "tg", "title", "content", vec![
-            make_link("baidu", "http://baidu.com/test"),
-            make_link("quark", "http://quark.cn/test"),
-        ], 1);
-        let merged = merge_results_by_type(&[r], "keyword", &["baidu".into()]);
-        assert!(merged.contains_key("baidu"));
-        assert!(!merged.contains_key("quark"));
-    }
-
-    #[test]
     fn test_urlencoding() {
         let encoded = urlencoding("hello world");
         assert_eq!(encoded, "hello+world");
@@ -650,7 +573,6 @@ mod tests {
         let req1 = SearchRequest {
             keyword: "test".into(),
             source_type: "all".into(),
-            result_type: "merged_by_type".into(),
             cloud_types: vec!["baidu".into(), "quark".into()],
             channels: vec!["ch1".into(), "ch2".into()],
             ..Default::default()
@@ -658,7 +580,6 @@ mod tests {
         let req2 = SearchRequest {
             keyword: "test".into(),
             source_type: "all".into(),
-            result_type: "merged_by_type".into(),
             cloud_types: vec!["quark".into(), "baidu".into()], // different order
             channels: vec!["ch2".into(), "ch1".into()],
             ..Default::default()

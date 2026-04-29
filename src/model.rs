@@ -52,7 +52,6 @@ pub struct SearchRequest {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Link {
-    #[serde(rename = "type")]
     pub disk_type: String,
     pub url: String,
     pub password: String,
@@ -78,27 +77,11 @@ pub struct SearchResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MergedLink {
-    pub url: String,
-    pub password: String,
-    pub note: String,
-    pub datetime: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub images: Vec<String>,
-}
-
-pub type MergedLinks = HashMap<String, Vec<MergedLink>>;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResponse {
     pub total: usize,
     pub cache_hit: bool,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub results: Vec<SearchResult>,
-    #[serde(rename = "merged_by_type", skip_serializing_if = "HashMap::is_empty", default)]
-    pub merged_by_type: MergedLinks,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -203,13 +186,11 @@ mod tests {
             total: 0,
             cache_hit: false,
             results: vec![],
-            merged_by_type: HashMap::new(),
         };
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("\"total\":0"));
         // Empty fields with skip_serializing_if should be absent
         assert!(!json.contains("results"));
-        assert!(!json.contains("merged_by_type"));
     }
 
     #[test]

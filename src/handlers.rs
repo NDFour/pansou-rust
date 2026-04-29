@@ -80,10 +80,6 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
         .and_then(|v| v.parse::<i32>().ok())
         .unwrap_or_default();
     let force_refresh = q.get("refresh").map(|v| v == "true").unwrap_or(false);
-    let mut result_type = q.get("res").cloned().unwrap_or_else(|| "merge".to_string());
-    if result_type == "merge" {
-        result_type = "merged_by_type".to_string();
-    }
     let source_type = q.get("src").cloned().unwrap_or_else(|| "all".to_string());
     let ext = q
         .get("ext")
@@ -99,7 +95,7 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
         },
         concurrency,
         force_refresh,
-        result_type,
+        result_type: String::new(),
         source_type,
         plugins,
         ext,
@@ -121,9 +117,6 @@ fn split_csv(v: Option<&String>) -> Vec<String> {
 }
 
 fn normalize_search_request(req: &mut SearchRequest) {
-    if req.result_type.is_empty() || req.result_type == "merge" {
-        req.result_type = "merged_by_type".to_string();
-    }
     if req.source_type.is_empty() {
         req.source_type = "all".to_string();
     }
@@ -137,6 +130,7 @@ fn normalize_search_request(req: &mut SearchRequest) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn test_split_csv_basic() {
@@ -176,15 +170,7 @@ mod tests {
     fn test_normalize_search_request_defaults() {
         let mut req = SearchRequest::default();
         normalize_search_request(&mut req);
-        assert_eq!(req.result_type, "merged_by_type");
         assert_eq!(req.source_type, "all");
-    }
-
-    #[test]
-    fn test_normalize_search_request_merge_alias() {
-        let mut req = SearchRequest { result_type: "merge".into(), ..Default::default() };
-        normalize_search_request(&mut req);
-        assert_eq!(req.result_type, "merged_by_type");
     }
 
     #[test]
@@ -207,18 +193,6 @@ mod tests {
         };
         normalize_search_request(&mut req);
         assert!(req.channels.is_empty());
-    }
-
-    #[test]
-    fn test_normalize_search_request_keeps_result_type() {
-        let mut req = SearchRequest {
-            result_type: "all".into(),
-            source_type: "all".into(),
-            ..Default::default()
-        };
-        normalize_search_request(&mut req);
-        assert_eq!(req.result_type, "all");
-        assert_eq!(req.source_type, "all");
     }
 
     #[test]
@@ -274,21 +248,4 @@ mod tests {
         assert!(req.force_refresh);
     }
 
-    #[test]
-    fn test_build_request_from_query_merge_alias() {
-        use crate::config::AppConfig;
-        use crate::service::SearchService;
-
-        let config = std::sync::Arc::new(crate::AppState {
-            config: AppConfig::default(),
-            search_service: SearchService::new(2, Duration::from_secs(5 * 60)),
-            check_service: crate::service::CheckService::new(),
-        });
-
-        let mut q = HashMap::new();
-        q.insert("kw".to_string(), "test".to_string());
-        q.insert("res".to_string(), "merge".to_string());
-        let req = build_request_from_query(&config, q);
-        assert_eq!(req.result_type, "merged_by_type");
-    }
 }

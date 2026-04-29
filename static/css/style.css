@@ -1402,6 +1402,49 @@ code, .code {
   text-align: center;
 }
 
+/* --- Pagination --- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl) 0 var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.pagination-btn {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-charcoal);
+  background: var(--color-sand);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--color-border-warm);
+  border-color: var(--color-ring-warm);
+}
+
+.pagination-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--color-olive);
+  user-select: none;
+}
+
 /* --- Check All Button --- */
 .check-all-bar {
   display: flex;
