@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::model::{SearchRequest, SearchResponse, SearchResult};
 
@@ -184,6 +184,7 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
         let title = text.lines().next().unwrap_or_default().trim().to_string();
         let links = extract_links(&text);
         if links.is_empty() {
+            warn!("no links found in tg message: {}", text);
             continue;
         }
         results.push(SearchResult {
