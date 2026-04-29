@@ -3,9 +3,9 @@ name: pansou-search
 description: 搜索全网网盘资源 - 支持百度网盘、夸克网盘、阿里云盘、天翼云盘、迅雷云盘等。当你需要在网盘上查找文件、电影、软件、书籍等资源时使用此 skill。
 ---
 
-# 盘搜搜索 Skill
+# 网盘搜索 Skill
 
-通过 pansou API 搜索全网网盘文件资源。生产服务地址：`https://www.panpanxia.com`。
+通过 盘盘侠 API 搜索全网网盘文件资源。生产服务地址：`https://www.panpanxia.com`。
 
 ## API 接口
 
