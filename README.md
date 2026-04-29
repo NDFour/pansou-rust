@@ -1,8 +1,10 @@
-# PanSou Rust
+# PanPanXia - 盘盘侠
+
+聚合搜索 Telegram 频道和多个云盘资源站的资源搜索引擎，使用 Rust + Axum 开发
+
+支持链接有效性检测（TODO）、多插件并发搜索、内嵌前端界面。
 
 ![网站截图](doc/imgs/index.png)
-
-PanSou 的 Rust 后端版本，提供 TG 频道搜索与网盘资源搜索聚合。
 
 ## API 路由
 
