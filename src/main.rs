@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    info!("日志级别: {}", config.log_level);
+    info!("版本号 v{}", env!("CARGO_PKG_VERSION"));
     info!("配置: {:?}", config);
 
     let state = Arc::new(AppState {
