@@ -2,21 +2,23 @@ mod config;
 mod handlers;
 mod model;
 mod plugin;
+mod assets;
 mod service;
 
 use std::{sync::Arc, time::Duration};
 
 use axum::{
-    response::Redirect,
+    http::{header, StatusCode, Uri},
+    response::{IntoResponse, Redirect},
     routing::{get, post},
     Router,
 };
+use assets::Assets;
 use config::AppConfig;
 use service::{CheckService, SearchService};
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
-    services::ServeDir,
     trace::TraceLayer,
 };
 use tracing::{info, info_span};
@@ -29,6 +31,22 @@ pub struct AppState {
     config: AppConfig,
     search_service: SearchService,
     check_service: CheckService,
+}
+
+async fn serve_embedded(uri: Uri) -> impl IntoResponse {
+    let path = uri.path().trim_start_matches('/');
+    let path = path.strip_prefix("static/").unwrap_or(path);
+    let path = if path.is_empty() { "index.html" } else { path };
+
+    match Assets::get(path) {
+        Some(content) => {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            let content_type = axum::http::HeaderValue::from_str(mime.as_ref())
+                .unwrap_or(axum::http::HeaderValue::from_static("application/octet-stream"));
+            ([(header::CONTENT_TYPE, content_type)], content.data.into_owned()).into_response()
+        }
+        None => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
+    }
 }
 
 #[tokio::main]
@@ -71,17 +89,12 @@ async fn main() -> anyhow::Result<()> {
         check_service: CheckService::new(),
     });
 
-    let static_dir = std::env::current_dir()
-        .map(|d| d.join("static"))
-        .unwrap_or_else(|_| std::path::PathBuf::from("static"));
-
     let api_router = Router::new()
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/api/search", get(handlers::search_get_handler).post(handlers::search_post_handler))
         .route("/api/check/links", post(handlers::check_handler))
         .route("/api/health", get(handlers::health_handler))
-        .nest_service("/static", ServeDir::new(&static_dir))
-        .fallback_service(ServeDir::new(&static_dir));
+        .fallback(serve_embedded);
 
     let app = api_router
         .layer(CompressionLayer::new())
