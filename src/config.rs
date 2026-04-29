@@ -8,6 +8,7 @@ pub struct AppConfig {
     pub log_level: String,
     pub log_file: String,
     pub concurrency: usize,
+    pub cache_ttl: u64,
     pub channels: Vec<String>,
 }
 
@@ -19,6 +20,7 @@ impl Default for AppConfig {
             log_level: "info".to_string(),
             log_file: String::new(),
             concurrency: 3,
+            cache_ttl: 300, // 5 minutes
             channels: vec!["tgsearchers6".to_string()],
         }
     }

@@ -4,7 +4,7 @@ mod model;
 mod plugin;
 mod service;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
     response::Redirect,
@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
 
     let state = Arc::new(AppState {
         config: config.clone(),
-        search_service: SearchService::new(config.concurrency),
+        search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl)),
         check_service: CheckService::new(),
     });
 

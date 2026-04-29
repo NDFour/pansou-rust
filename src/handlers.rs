@@ -133,3 +133,162 @@ fn normalize_search_request(req: &mut SearchRequest) {
         _ => {}
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_csv_basic() {
+        let s = "a,b,c".to_string();
+        let result = split_csv(Some(&s));
+        assert_eq!(result, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn test_split_csv_with_spaces() {
+        let s = "a, b ,c".to_string();
+        let result = split_csv(Some(&s));
+        assert_eq!(result, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn test_split_csv_empty_parts() {
+        let s = "a,,b".to_string();
+        let result = split_csv(Some(&s));
+        assert_eq!(result, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn test_split_csv_none() {
+        let result: Vec<String> = split_csv(None);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_split_csv_empty_string() {
+        let s = String::new();
+        let result = split_csv(Some(&s));
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_search_request_defaults() {
+        let mut req = SearchRequest::default();
+        normalize_search_request(&mut req);
+        assert_eq!(req.result_type, "merged_by_type");
+        assert_eq!(req.source_type, "all");
+    }
+
+    #[test]
+    fn test_normalize_search_request_merge_alias() {
+        let mut req = SearchRequest { result_type: "merge".into(), ..Default::default() };
+        normalize_search_request(&mut req);
+        assert_eq!(req.result_type, "merged_by_type");
+    }
+
+    #[test]
+    fn test_normalize_search_request_tg_clears_plugins() {
+        let mut req = SearchRequest {
+            source_type: "tg".into(),
+            plugins: vec!["p1".into()],
+            ..Default::default()
+        };
+        normalize_search_request(&mut req);
+        assert!(req.plugins.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_search_request_plugin_clears_channels() {
+        let mut req = SearchRequest {
+            source_type: "plugin".into(),
+            channels: vec!["ch1".into()],
+            ..Default::default()
+        };
+        normalize_search_request(&mut req);
+        assert!(req.channels.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_search_request_keeps_result_type() {
+        let mut req = SearchRequest {
+            result_type: "all".into(),
+            source_type: "all".into(),
+            ..Default::default()
+        };
+        normalize_search_request(&mut req);
+        assert_eq!(req.result_type, "all");
+        assert_eq!(req.source_type, "all");
+    }
+
+    #[test]
+    fn test_build_request_from_query_basic() {
+        use crate::config::AppConfig;
+        use crate::service::SearchService;
+
+        let config = std::sync::Arc::new(crate::AppState {
+            config: AppConfig::default(),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60)),
+            check_service: crate::service::CheckService::new(),
+        });
+
+        let mut q = HashMap::new();
+        q.insert("kw".to_string(), "test_kw".to_string());
+        let req = build_request_from_query(&config, q);
+        assert_eq!(req.keyword, "test_kw");
+    }
+
+    #[test]
+    fn test_build_request_from_query_with_channels() {
+        use crate::config::AppConfig;
+        use crate::service::SearchService;
+
+        let config = std::sync::Arc::new(crate::AppState {
+            config: AppConfig::default(),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60)),
+            check_service: crate::service::CheckService::new(),
+        });
+
+        let mut q = HashMap::new();
+        q.insert("kw".to_string(), "test".to_string());
+        q.insert("channels".to_string(), "ch1,ch2".to_string());
+        let req = build_request_from_query(&config, q);
+        assert_eq!(req.channels, vec!["ch1", "ch2"]);
+    }
+
+    #[test]
+    fn test_build_request_from_query_with_refresh() {
+        use crate::config::AppConfig;
+        use crate::service::SearchService;
+
+        let config = std::sync::Arc::new(crate::AppState {
+            config: AppConfig::default(),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60)),
+            check_service: crate::service::CheckService::new(),
+        });
+
+        let mut q = HashMap::new();
+        q.insert("kw".to_string(), "test".to_string());
+        q.insert("refresh".to_string(), "true".to_string());
+        let req = build_request_from_query(&config, q);
+        assert!(req.force_refresh);
+    }
+
+    #[test]
+    fn test_build_request_from_query_merge_alias() {
+        use crate::config::AppConfig;
+        use crate::service::SearchService;
+
+        let config = std::sync::Arc::new(crate::AppState {
+            config: AppConfig::default(),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60)),
+            check_service: crate::service::CheckService::new(),
+        });
+
+        let mut q = HashMap::new();
+        q.insert("kw".to_string(), "test".to_string());
+        q.insert("res".to_string(), "merge".to_string());
+        let req = build_request_from_query(&config, q);
+        assert_eq!(req.result_type, "merged_by_type");
+    }
+}

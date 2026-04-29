@@ -94,6 +94,7 @@ pub type MergedLinks = HashMap<String, Vec<MergedLink>>;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResponse {
     pub total: usize,
+    pub cache_hit: bool,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub results: Vec<SearchResult>,
     #[serde(rename = "merged_by_type", skip_serializing_if = "HashMap::is_empty", default)]
@@ -134,4 +135,89 @@ pub struct CheckResponse {
     pub results: Vec<CheckResult>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn test_api_response_success() {
+        let resp = ApiResponse::success("hello");
+        assert_eq!(resp.code, 0);
+        assert_eq!(resp.message, "success");
+        assert_eq!(resp.data, Some("hello"));
+    }
+
+    #[test]
+    fn test_search_request_default() {
+        let req = SearchRequest::default();
+        assert!(req.keyword.is_empty());
+        assert!(req.channels.is_empty());
+        assert!(!req.force_refresh);
+        assert_eq!(req.source_type, "");
+        assert_eq!(req.result_type, "");
+    }
+
+    #[test]
+    fn test_search_request_deserialize_minimal() {
+        let json = r#"{"kw":"test"}"#;
+        let req: SearchRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.keyword, "test");
+        assert!(req.channels.is_empty());
+        assert!(!req.force_refresh);
+    }
+
+    #[test]
+    fn test_search_request_deserialize_full() {
+        let json = r#"{"kw":"test","channels":["ch1","ch2"],"conc":5,"refresh":true,"res":"all","src":"tg","cloud_types":["baidu"],"plugins":["p1"]}"#;
+        let req: SearchRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.keyword, "test");
+        assert_eq!(req.channels, vec!["ch1", "ch2"]);
+        assert_eq!(req.concurrency, 5);
+        assert!(req.force_refresh);
+        assert_eq!(req.result_type, "all");
+        assert_eq!(req.source_type, "tg");
+        assert_eq!(req.cloud_types, vec!["baidu"]);
+        assert_eq!(req.plugins, vec!["p1"]);
+    }
+
+    #[test]
+    fn test_link_serialization() {
+        let link = Link {
+            disk_type: "baidu".into(),
+            url: "https://pan.baidu.com/s/abc".into(),
+            password: "pwd123".into(),
+            datetime: None,
+            work_title: None,
+        };
+        let json = serde_json::to_string(&link).unwrap();
+        assert!(json.contains("\"type\":\"baidu\""));
+        assert!(json.contains("\"url\":\"https://pan.baidu.com/s/abc\""));
+        // None fields should be absent
+        assert!(!json.contains("datetime"));
+        assert!(!json.contains("work_title"));
+    }
+
+    #[test]
+    fn test_search_response_serialization() {
+        let resp = SearchResponse {
+            total: 0,
+            cache_hit: false,
+            results: vec![],
+            merged_by_type: HashMap::new(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("\"total\":0"));
+        // Empty fields with skip_serializing_if should be absent
+        assert!(!json.contains("results"));
+        assert!(!json.contains("merged_by_type"));
+    }
+
+    #[test]
+    fn test_check_item_deserialize() {
+        let json = r#"{"disk_type":"baidu","url":"https://pan.baidu.com/s/abc","password":"1234"}"#;
+        let item: CheckItem = serde_json::from_str(json).unwrap();
+        assert_eq!(item.disk_type, "baidu");
+        assert_eq!(item.url, "https://pan.baidu.com/s/abc");
+        assert_eq!(item.password, "1234");
+    }
+}

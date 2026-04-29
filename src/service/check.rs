@@ -134,3 +134,156 @@ fn ttl_for_state(state: &str) -> Duration {
 fn urlencoding(input: &str) -> String {
     url::form_urlencoded::byte_serialize(input.as_bytes()).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_item(disk_type: &str, url: &str) -> CheckItem {
+        CheckItem { disk_type: disk_type.into(), url: url.into(), password: String::new() }
+    }
+
+    #[test]
+    fn test_ttl_for_state_ok() {
+        assert_eq!(ttl_for_state("ok"), Duration::from_secs(24 * 3600));
+    }
+
+    #[test]
+    fn test_ttl_for_state_bad() {
+        assert_eq!(ttl_for_state("bad"), Duration::from_secs(6 * 3600));
+    }
+
+    #[test]
+    fn test_ttl_for_state_locked() {
+        assert_eq!(ttl_for_state("locked"), Duration::from_secs(12 * 3600));
+    }
+
+    #[test]
+    fn test_ttl_for_state_unsupported() {
+        assert_eq!(ttl_for_state("unsupported"), Duration::from_secs(24 * 3600));
+    }
+
+    #[test]
+    fn test_ttl_for_state_default() {
+        assert_eq!(ttl_for_state("unknown"), Duration::from_secs(30 * 60));
+    }
+
+    #[test]
+    fn test_normalize_empty_url() {
+        assert_eq!(normalize_share_link("baidu", "", ""), "");
+    }
+
+    #[test]
+    fn test_normalize_adds_pwd_for_baidu() {
+        let result = normalize_share_link("baidu", "https://pan.baidu.com/s/abc", "testpwd");
+        assert!(result.contains("pwd=testpwd"));
+    }
+
+    #[test]
+    fn test_normalize_no_pwd_for_non_baidu_quark_uc() {
+        let result = normalize_share_link("115", "https://115.com/s/abc", "testpwd");
+        assert!(!result.contains("pwd="));
+    }
+
+    #[test]
+    fn test_normalize_keeps_existing_pwd() {
+        let result = normalize_share_link("baidu", "https://pan.baidu.com/s/abc?pwd=existing", "newpwd");
+        assert!(result.contains("pwd=existing"));
+        assert!(!result.contains("pwd=newpwd"));
+    }
+
+    #[test]
+    fn test_normalize_removes_fragment() {
+        let result = normalize_share_link("baidu", "https://pan.baidu.com/s/abc#section", "");
+        assert!(!result.contains('#'));
+    }
+
+    #[test]
+    fn test_quick_check_known_type() {
+        let item = make_item("baidu", "https://pan.baidu.com/s/abc");
+        let result = quick_check(&item, "https://pan.baidu.com/s/abc");
+        assert_eq!(result.state, "uncertain");
+    }
+
+    #[test]
+    fn test_quick_check_bad_link() {
+        let item = make_item("baidu", "not-a-valid-url");
+        let result = quick_check(&item, "not-a-valid-url");
+        assert_eq!(result.state, "bad");
+    }
+
+    #[test]
+    fn test_quick_check_unsupported() {
+        let item = make_item("magnet", "magnet:?xt=urn:btih:abc");
+        let result = quick_check(&item, "magnet:?xt=urn:btih:abc");
+        assert_eq!(result.state, "unsupported");
+    }
+
+    #[test]
+    fn test_check_empty_items() {
+        let service = CheckService::new();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let resp = rt.block_on(service.check(&[]));
+        assert!(resp.results.is_empty());
+    }
+
+    #[test]
+    fn test_check_with_items() {
+        let service = CheckService::new();
+        let items = vec![make_item("baidu", "https://pan.baidu.com/s/abc")];
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let resp = rt.block_on(service.check(&items));
+        assert_eq!(resp.results.len(), 1);
+        assert_eq!(resp.results[0].disk_type, "baidu");
+        assert!(!resp.results[0].cache_hit);
+    }
+
+    #[test]
+    fn test_check_cache_hit() {
+        let service = CheckService::new();
+        let items = vec![make_item("baidu", "https://pan.baidu.com/s/abc")];
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        // First check — cache miss
+        let resp1 = rt.block_on(service.check(&items));
+        assert!(!resp1.results[0].cache_hit);
+        // Second check — cache hit
+        let resp2 = rt.block_on(service.check(&items));
+        assert!(resp2.results[0].cache_hit);
+    }
+
+    #[test]
+    fn test_check_expired_cache() {
+        let service = CheckService::new();
+        let items = vec![make_item("baidu", "https://pan.baidu.com/s/expired")];
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let _resp1 = rt.block_on(service.check(&items));
+
+        // Manually clear the cache to simulate expiry
+        if let Ok(mut map) = service.cache.lock() {
+            map.clear();
+        }
+
+        let resp2 = rt.block_on(service.check(&items));
+        assert!(!resp2.results[0].cache_hit);
+    }
+
+    #[test]
+    fn test_build_result_fields() {
+        let item = make_item("quark", "https://pan.quark.cn/s/test");
+        let result = build_result(&item, "https://pan.quark.cn/s/test", "ok", false, "valid");
+        assert_eq!(result.disk_type, "quark");
+        assert_eq!(result.url, "https://pan.quark.cn/s/test");
+        assert_eq!(result.state, "ok");
+        assert!(!result.cache_hit);
+        assert_eq!(result.summary, Some("valid".into()));
+        assert!(result.checked_at > 0);
+        assert!(result.expires_at > result.checked_at);
+        assert!(result.normalized_url.is_some());
+    }
+
+    #[test]
+    fn test_urlencoding() {
+        assert_eq!(urlencoding("hello world"), "hello+world");
+        assert_eq!(urlencoding("abc123"), "abc123");
+    }
+}

@@ -13,3 +13,5 @@ log_file: logs/app.log
 
 # 查询 tg 时的并发数
 concurrency: 2
+# 搜索结果缓存时间，单位：秒
+cache_ttl: 300
