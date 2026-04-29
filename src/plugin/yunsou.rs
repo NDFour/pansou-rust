@@ -112,6 +112,7 @@ impl SearchPlugin for YunsouPlugin {
                     message_id: format!("yunsou-{}", item.id),
                     unique_id: format!("yunsou-{}", item.id),
                     channel: String::new(),
+                    channel_score: self.channel_score(),
                     datetime,
                     title: item.title,
                     content,

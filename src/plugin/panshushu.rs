@@ -36,6 +36,10 @@ impl SearchPlugin for PanshushuPlugin {
         "panshushu"
     }
 
+    fn channel_score(&self) -> i32 {
+        100
+    }
+
     async fn search(&self, keyword: &str, client: &Client) -> Vec<SearchResult> {
         let url = format!(
             "{}?keyword={}&page=1&page_size=30&s=a1",
@@ -68,6 +72,7 @@ impl SearchPlugin for PanshushuPlugin {
                     message_id: format!("panshushu_{}", item.id),
                     unique_id: format!("panshushu_{}", item.id),
                     channel: "panshushu".to_string(),
+                    channel_score: self.channel_score(),
                     datetime: now - chrono::Duration::seconds(i as i64),
                     title: title.clone(),
                     content: String::new(),

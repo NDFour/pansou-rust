@@ -76,7 +76,6 @@ impl SearchService {
             async { if need_plugin { self.search_native_plugins(&req.keyword).await } else { vec![] } },
         );
 
-        info!("合并搜索结果: tg: {:?}, plugin: {:?}", tg_results.len(), native_plugin_results.len());
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
         // 按照多种规则排序
         sort_results_by_time_and_keywords(&mut all_results);
@@ -191,6 +190,7 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
             message_id: message_id.to_string(),
             unique_id: format!("{}_{}", channel, message_id),
             channel: format!("tg:{}", channel),
+            channel_score: 40, // tg 频道默认可靠度得分
             datetime,
             title,
             content: text,
@@ -272,8 +272,7 @@ fn merge_search_results(existing: Vec<SearchResult>, new_results: Vec<SearchResu
             map.insert(key, r);
         }
     }
-    let mut merged = map.into_values().collect::<Vec<_>>();
-    merged
+    map.into_values().collect::<Vec<_>>()
 }
 
 /// 完整性得分 = 唯一标识得分 + 链接得分 + 内容得分 + 标签得分 + 标题得分
@@ -290,28 +289,16 @@ fn sort_results_by_time_and_keywords(results: &mut [SearchResult]) {
     results.sort_by(|a, b| total_score(b).partial_cmp(&total_score(a)).unwrap_or(Ordering::Equal));
 }
 
-/// 总得分 = 时间得分 + 插件等级得分
+/// 总得分 = 时间得分 + 频道得分
 fn total_score(r: &SearchResult) -> f64 {
-    time_score(r.datetime) + plugin_level_score(plugin_level_from_result(r)) as f64
+    time_score(r.datetime) + r.channel_score as f64
 }
 
 /// 时间得分 = 发布时间与当前时间的差值
 /// 时间越近，得分越高
 fn time_score(datetime: DateTime<Utc>) -> f64 {
     let diff_days = (Utc::now() - datetime).num_hours() as f64 / 24.0;
-    if diff_days <= 1.0 { 500.0 } else if diff_days <= 3.0 { 400.0 } else if diff_days <= 7.0 { 300.0 } else if diff_days <= 30.0 { 200.0 } else if diff_days <= 90.0 { 100.0 } else if diff_days <= 365.0 { 50.0 } else { 20.0 }
-}
-
-/// 插件等级得分 = 1: tg, 2: 插件, 3: 其他(默认)
-/// 插件等级越高，得分越高
-fn plugin_level_score(level: i32) -> i32 {
-    match level { 1 => 500, 2 => 1000, _ => 0 }
-}
-
-/// 插件等级 = 1: tg, 2: 插件, 3: 其他(默认)
-/// 插件等级越高，得分越高
-fn plugin_level_from_result(r: &SearchResult) -> i32 {
-    if !r.channel.is_empty() { match r.channel.as_str() { "tg" => 1, "plugin" => 2, _ => 3 } } else { 3 }
+    if diff_days <= 7.0 { 30.0 } else if diff_days <= 30.0 { 25.0 } else if diff_days <= 90.0 { 20.0 } else if diff_days <= 365.0 { 10.0 } else { 0.0 }
 }
 
 fn urlencoding(input: &str) -> String {
@@ -351,6 +338,7 @@ mod tests {
             message_id: unique_id.into(),
             unique_id: unique_id.into(),
             channel: channel.into(),
+            channel_score: 0,
             datetime: Utc::now() - chrono::Duration::hours(hours_ago),
             title: title.into(),
             content: content.into(),
@@ -477,6 +465,7 @@ mod tests {
             unique_id: "tg_ch1_123".into(),
             message_id: "123".into(),
             channel: "tg".into(),
+            channel_score: 100,
             datetime: Utc::now(),
             title: "A long enough title here".into(),
             content: "some content".into(),
@@ -488,6 +477,7 @@ mod tests {
             unique_id: "".into(),
             message_id: "".into(),
             channel: "".into(),
+            channel_score: 0,
             datetime: Utc::now(),
             title: "x".into(),
             content: "".into(),
@@ -518,32 +508,6 @@ mod tests {
     }
 
     #[test]
-    fn test_plugin_level_score() {
-        assert_eq!(plugin_level_score(1), 500);
-        assert_eq!(plugin_level_score(2), 1000);
-        assert_eq!(plugin_level_score(0), 0);
-        assert_eq!(plugin_level_score(99), 0);
-    }
-
-    #[test]
-    fn test_plugin_level_from_result_tg() {
-        let r = make_result("id1", "tg", "t", "", vec![], 0);
-        assert_eq!(plugin_level_from_result(&r), 1);
-    }
-
-    #[test]
-    fn test_plugin_level_from_result_plugin() {
-        let r = make_result("id1", "plugin", "t", "", vec![], 0);
-        assert_eq!(plugin_level_from_result(&r), 2);
-    }
-
-    #[test]
-    fn test_plugin_level_from_result_unknown() {
-        let r = make_result("id1", "", "t", "", vec![], 0);
-        assert_eq!(plugin_level_from_result(&r), 3);
-    }
-
-    #[test]
     fn test_total_score_ordering() {
         let recent = make_result("a", "tg", "t", "", vec![], 0);
         let old = make_result("b", "tg", "t", "", vec![], 400);
@@ -556,6 +520,7 @@ mod tests {
             unique_id: "same_id".into(),
             message_id: "1".into(),
             channel: "tg".into(),
+            channel_score: 100,
             datetime: Utc::now(),
             title: "x".into(),
             content: "".into(),
@@ -567,6 +532,7 @@ mod tests {
             unique_id: "same_id".into(),
             message_id: "1".into(),
             channel: "tg".into(),
+            channel_score: 100,
             datetime: Utc::now(),
             title: "A much better title".into(),
             content: "full content here".into(),

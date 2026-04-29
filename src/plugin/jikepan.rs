@@ -93,6 +93,7 @@ impl SearchPlugin for JikepanPlugin {
                     message_id: format!("jikepan_{}", i),
                     unique_id: format!("jikepan_{}", i),
                     channel: String::new(),
+                    channel_score: self.channel_score(),
                     datetime: now,
                     title: item.name,
                     content: String::new(),

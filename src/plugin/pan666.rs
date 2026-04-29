@@ -124,6 +124,7 @@ impl SearchPlugin for Pan666Plugin {
                     message_id: unique_id.clone(),
                     unique_id,
                     channel: String::new(),
+                    channel_score: self.channel_score(),
                     datetime,
                     title: disc.attributes.title.clone(),
                     content: cleaned,

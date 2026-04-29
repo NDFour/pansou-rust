@@ -66,6 +66,7 @@ pub struct SearchResult {
     pub message_id: String,
     pub unique_id: String, // 唯一标识，用于合并搜索结果
     pub channel: String, // tg:xxx, plugin:插件的名字(如panshushu), unknown(默认)
+    pub channel_score: i32, // 频道得分，可靠度越高，得分越高
     pub datetime: DateTime<Utc>, // 发布时间
     pub title: String, // 标题
     pub content: String, // 内容

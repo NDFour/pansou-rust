@@ -20,6 +20,10 @@ pub trait SearchPlugin: Send + Sync {
     fn priority(&self) -> i32 {
         3
     }
+    #[allow(dead_code)]
+    fn channel_score(&self) -> i32 {
+        40 // 默认可靠度得分，100分表示最高可靠度
+    }
     async fn search(&self, keyword: &str, client: &Client) -> Vec<SearchResult>;
 }
 

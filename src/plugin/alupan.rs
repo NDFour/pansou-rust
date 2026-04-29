@@ -136,6 +136,7 @@ impl SearchPlugin for AlupanPlugin {
                     message_id: format!("alupan-{}", art.article_id),
                     unique_id: format!("alupan-{}", art.article_id),
                     channel: String::new(),
+                    channel_score: self.channel_score(),
                     datetime: art.publish_time,
                     title: art.title.clone(),
                     content: art.summary.clone(),
