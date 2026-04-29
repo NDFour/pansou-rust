@@ -400,13 +400,20 @@ function renderMergedResults(container, data) {
   // Collect visible links and paginate
   let visibleLinks = [];
   if (activeType === '__all__') {
-    for (const type of types) {
-      merged[type].forEach((link) => {
-        visibleLinks.push({ ...link, _type: type });
+    data.results.forEach((result) => {
+      (result.links || []).forEach((link) => {
+        const type = link.disk_type || 'other';
+        visibleLinks.push({
+          url: link.url,
+          password: link.password || '',
+          note: result.title || link.url,
+          datetime: link.datetime || result.datetime,
+          source: result.channel || 'unknown',
+          images: result.images || [],
+          _type: type,
+        });
       });
-    }
-    // Sort by datetime descending
-    visibleLinks.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+    });
   } else {
     visibleLinks = (merged[activeType] || []).map((link) => ({ ...link, _type: activeType }));
   }
