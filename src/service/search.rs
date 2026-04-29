@@ -31,8 +31,7 @@ pub struct SearchService {
 impl SearchService {
     pub fn new(concurrency: usize, cache_ttl: Duration) -> Self {
         let client = Client::builder()
-            .connect_timeout(Duration::from_secs(8))
-            .timeout(Duration::from_secs(12))
+            .timeout(Duration::from_secs(10))
             .user_agent("Mozilla/5.0 pansou-rust")
             .build()
             .unwrap_or_else(|_| Client::new());
