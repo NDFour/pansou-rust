@@ -10,16 +10,13 @@ const API_BASE = '/api';
 const state = {
   // Search state
   searchResults: null,
-  viewMode: 'list', // 'list' | 'merged'
   currentKeyword: '',
   currentFilters: {},
   activeMergeType: '__all__',
 
   // Pagination
-  listPage: 1,
-  mergedPage: 1,
+  currentPage: 1,
   pageSize: 20,
-  mergedPageSize: 20,
 
   // Check state
   checkingAll: false,
@@ -127,17 +124,10 @@ const Toast = {
    Search UI
    ============================================================ */
 
-const CHANNEL_FRIENDLY = {
-  tgsearchers6: 'TG搜索',
-  yunpanpan: '云盘盘',
-  zhao_source: '赵资源',
-};
-
 function initSearchPage() {
   const searchInput = document.getElementById('search-input');
   const searchBtn = document.getElementById('search-btn');
   const filterBar = document.getElementById('filter-bar');
-  const viewTabs = document.querySelectorAll('.view-tab');
 
   // Search trigger
   if (searchBtn) {
@@ -168,23 +158,6 @@ function initSearchPage() {
       if (state.currentKeyword) performSearch();
     });
   }
-
-  // View mode tabs
-  viewTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      viewTabs.forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      state.viewMode = tab.dataset.view;
-      state.listPage = 1;
-      state.mergedPage = 1;
-
-      const container = document.getElementById('results-container');
-      if (container) {
-        container.classList.add('switching');
-        requestAnimationFrame(() => { renderResults(); });
-      }
-    });
-  });
 }
 
 async function loadChannels() {
@@ -196,7 +169,7 @@ async function loadChannels() {
     const channels = health.channels || [];
 
     container.innerHTML = channels.map((ch) => {
-      const label = CHANNEL_FRIENDLY[ch] || ch;
+      const label = ch;
       return `<button class="filter-chip" data-filter-group="channel" data-filter-value="${escapeHtml(ch)}" title="${escapeHtml(ch)}">${escapeHtml(label)}</button>`;
     }).join('');
   } catch {
@@ -227,8 +200,7 @@ async function performSearch() {
 
   state.currentKeyword = keyword;
   state.activeMergeType = '__all__';
-  state.listPage = 1;
-  state.mergedPage = 1;
+  state.currentPage = 1;
   const filters = getActiveFilters();
 
   // Build search params
@@ -346,7 +318,6 @@ function renderPagination(page, totalPages, hasPrev, hasNext) {
 
 function renderResults() {
   const container = document.getElementById('results-container');
-  const countEl = document.getElementById('results-count');
   if (!container) return;
 
   const data = state.searchResults;
@@ -357,14 +328,10 @@ function renderResults() {
         <h3>输入关键词开始搜索</h3>
       </div>
     `;
-    if (countEl) countEl.textContent = '';
     return;
   }
 
   const total = data.total || 0;
-  if (countEl) {
-    countEl.textContent = `共找到 ${total} 条结果`;
-  }
 
   if (total === 0) {
     container.innerHTML = `
@@ -376,37 +343,10 @@ function renderResults() {
     return;
   }
 
-  if (state.viewMode === 'merged') {
-    renderMergedResults(container, data);
-  } else {
-    renderListResults(container, data);
-  }
+  renderMergedResults(container, data);
 
   // Remove switching class for smooth transition
   container.classList.remove('switching');
-}
-
-function renderListResults(container, data) {
-  const results = data.results || [];
-  const { pageItems, totalPages, hasPrev, hasNext } = paginate(results, state.listPage, state.pageSize);
-
-  let html = '';
-
-  // Check all bar
-  const totalLinks = results.reduce((sum, r) => sum + (r.links?.length || 0), 0);
-  if (totalLinks > 0) {
-    html += renderCheckAllBar(totalLinks);
-  }
-
-  pageItems.forEach((result, i) => {
-    html += renderResultCard(result, i);
-  });
-
-  html += renderPagination(state.listPage, totalPages, hasPrev, hasNext);
-
-  container.innerHTML = html;
-  bindResultEvents();
-  bindPaginationEvents('list');
 }
 
 const TYPE_FRIENDLY = {
@@ -471,7 +411,7 @@ function renderMergedResults(container, data) {
     visibleLinks = (merged[activeType] || []).map((link) => ({ ...link, _type: activeType }));
   }
 
-  const { pageItems, totalPages, hasPrev, hasNext } = paginate(visibleLinks, state.mergedPage, state.mergedPageSize);
+  const { pageItems, totalPages, hasPrev, hasNext } = paginate(visibleLinks, state.currentPage, state.pageSize);
 
   if (activeType === '__all__') {
     // Group paginated items by type for display
@@ -486,7 +426,7 @@ function renderMergedResults(container, data) {
       const links = grouped[type];
       const label = TYPE_FRIENDLY[type] || type;
       html += `<div class="merged-group">
-        <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${links.length}</span></div>`;
+        <div class="merged-group-header">${escapeHtml(label)}</div>`;
 
       links.forEach((link, i) => {
         const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
@@ -499,7 +439,7 @@ function renderMergedResults(container, data) {
     if (pageItems.length > 0) {
       const label = TYPE_FRIENDLY[activeType] || activeType;
       html += `<div class="merged-group">
-        <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${pageItems.length}</span></div>`;
+        <div class="merged-group-header">${escapeHtml(label)}</div>`;
 
       pageItems.forEach((link, i) => {
         const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
@@ -510,15 +450,16 @@ function renderMergedResults(container, data) {
     }
   }
 
-  html += renderPagination(state.mergedPage, totalPages, hasPrev, hasNext);
+  html += renderPagination(state.currentPage, totalPages, hasPrev, hasNext);
 
   container.innerHTML = html;
   bindResultEvents();
   bindMergeTabs();
-  bindPaginationEvents('merged');
+  bindPaginationEvents();
 }
 
 function renderMergedCard(link, label, delayClass) {
+  const channelLabel = link.source || '';
   return `
     <div class="merged-card merged-card-entrance ${delayClass}" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
       <div class="result-card-header">
@@ -529,6 +470,7 @@ function renderMergedCard(link, label, delayClass) {
         </div>
         <div class="flex flex-col items-center gap-xs">
           <span class="tag">${escapeHtml(label)}</span>
+          ${channelLabel ? `<span class="result-channel">${escapeHtml(channelLabel)}</span>` : ''}
           <span class="caption text-stone">${formatDate(link.datetime)}</span>
         </div>
       </div>
@@ -540,23 +482,18 @@ function bindMergeTabs() {
   document.querySelectorAll('.type-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       state.activeMergeType = tab.dataset.mergeType;
-      state.mergedPage = 1;
+      state.currentPage = 1;
       renderResults();
     });
   });
 }
 
-function bindPaginationEvents(viewMode) {
+function bindPaginationEvents() {
   document.querySelectorAll('.pagination-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
-      if (viewMode === 'list') {
-        if (action === 'prev' && state.listPage > 1) state.listPage--;
-        if (action === 'next') state.listPage++;
-      } else {
-        if (action === 'prev' && state.mergedPage > 1) state.mergedPage--;
-        if (action === 'next') state.mergedPage++;
-      }
+      if (action === 'prev' && state.currentPage > 1) state.currentPage--;
+      if (action === 'next') state.currentPage++;
 
       const container = document.getElementById('results-container');
       if (container) {
@@ -565,79 +502,6 @@ function bindPaginationEvents(viewMode) {
       }
     });
   });
-}
-
-function renderResultCard(result, index = 0) {
-  const links = result.links || [];
-  const tags = result.tags || [];
-  const images = result.images || [];
-  const delayClass = index <= 12 ? `card-delay-${index}` : 'card-delay-12';
-
-  let linksHtml = '';
-  if (links.length > 0) {
-    linksHtml = `
-      <table class="links-table">
-        <thead>
-          <tr>
-            <th>类型</th>
-            <th>链接</th>
-            <th>提取码</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${links
-            .map(
-              (link) => `
-            <tr data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
-              <td><span class="link-type-badge">${escapeHtml(link.disk_type)}</span></td>
-              <td><a class="link-url" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.url)}</a></td>
-              <td>${link.password ? `<span class="link-password">${escapeHtml(link.password)} <button class="copy-btn" data-copy="${escapeHtml(link.password)}">复制</button></span>` : '<span class="text-stone">—</span>'}</td>
-              <td><button class="btn btn-sm btn-secondary copy-btn" data-copy="${escapeHtml(link.url)}">复制链接</button></td>
-            </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>`;
-  }
-
-  let tagsHtml = '';
-  if (tags.length > 0) {
-    tagsHtml =
-      '<div class="flex flex-wrap gap-xs mt-md">' +
-      tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('') +
-      '</div>';
-  }
-
-  let imagesHtml = '';
-  if (images.length > 0) {
-    imagesHtml =
-      '<div class="flex gap-sm mt-md">' +
-      images
-        .map(
-          (img) =>
-            `<img src="${escapeHtml(img)}" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius-sm)" loading="lazy">`
-        )
-        .join('') +
-      '</div>';
-  }
-
-  return `
-    <div class="result-card result-card-entrance ${delayClass}">
-      <div class="result-card-header">
-        <div>
-          <div class="result-title" title="${escapeHtml(result.title || '无标题')}">${escapeHtml(result.title || '无标题')}</div>
-          <div class="result-meta">
-            <span class="result-channel">${escapeHtml(result.channel)}</span>
-            <span class="result-meta-item">${formatDate(result.datetime)}</span>
-          </div>
-        </div>
-      </div>
-      ${result.content ? `<div class="result-content">${escapeHtml(result.content)}</div>` : ''}
-      ${linksHtml}
-      ${imagesHtml}
-      ${tagsHtml}
-    </div>`;
 }
 
 function renderCheckAllBar(totalLinks) {

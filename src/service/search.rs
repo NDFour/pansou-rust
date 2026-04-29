@@ -172,7 +172,7 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
         results.push(SearchResult {
             message_id: message_id.to_string(),
             unique_id: format!("{}_{}", channel, message_id),
-            channel: channel.to_string(),
+            channel: format!("tg:{}", channel),
             datetime,
             title,
             content: text,

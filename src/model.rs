@@ -173,7 +173,7 @@ mod tests {
             work_title: None,
         };
         let json = serde_json::to_string(&link).unwrap();
-        assert!(json.contains("\"type\":\"baidu\""));
+        assert!(json.contains("\"disk_type\":\"baidu\""));
         assert!(json.contains("\"url\":\"https://pan.baidu.com/s/abc\""));
         // None fields should be absent
         assert!(!json.contains("datetime"));
