@@ -1,5 +1,5 @@
 ---
-name: pansou-search
+name: panpanxia-search
 description: 搜索全网网盘资源 - 支持百度网盘、夸克网盘、阿里云盘、天翼云盘、迅雷云盘等。当你需要在网盘上查找文件、电影、软件、书籍等资源时使用此 skill。
 ---
 
