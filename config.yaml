@@ -12,7 +12,7 @@ log_level: info
 log_file: logs/app.log
 
 # 查询 tg 时的并发数
-concurrency: 2
+concurrency: 6
 # 搜索结果内存缓存最大数量
 # 超过该数量后，会淘汰最旧的条目
 max_cache_size: 1024
