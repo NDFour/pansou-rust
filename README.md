@@ -1,5 +1,7 @@
 # PanSou Rust
 
+![网站截图](doc/imgs/index.png)
+
 PanSou 的 Rust 后端版本，提供 TG 频道搜索与网盘资源搜索聚合。
 
 ## API 路由
