@@ -156,6 +156,10 @@ function initSearchPage() {
       siblings.forEach((s) => s.classList.remove('active'));
       chip.classList.add('active');
 
+      // Pop animation
+      chip.classList.add('pop');
+      chip.addEventListener('animationend', () => chip.classList.remove('pop'), { once: true });
+
       if (state.currentKeyword) performSearch();
     });
   }
@@ -166,7 +170,12 @@ function initSearchPage() {
       viewTabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
       state.viewMode = tab.dataset.view;
-      renderResults();
+
+      const container = document.getElementById('results-container');
+      if (container) {
+        container.classList.add('switching');
+        requestAnimationFrame(() => { renderResults(); });
+      }
     });
   });
 }
@@ -224,29 +233,53 @@ async function performSearch() {
     params.channels = [filters.channel];
   }
 
-  // Show loading
+  // Search button loading state
+  const searchBtn = document.getElementById('search-btn');
+  const searchBar = document.querySelector('.search-bar');
+  if (searchBtn) searchBtn.classList.add('loading');
+  if (searchBar) searchBar.classList.add('searching');
+
+  // Show loading with animated skeletons + searching dots
   const resultsContainer = document.getElementById('results-container');
   if (resultsContainer) {
+    resultsContainer.classList.remove('switching');
     resultsContainer.innerHTML = `
-      <div class="skeleton-card skeleton mb-md"></div>
-      <div class="skeleton-card skeleton mb-md"></div>
-      <div class="skeleton-card skeleton mb-md"></div>
+      <div style="text-align:center;padding:var(--space-2xl) 0;">
+        <div class="spinner spinner-lg" style="margin:0 auto var(--space-lg);"></div>
+        <p style="font-size:0.9375rem;color:var(--color-olive);">
+          正在搜索
+          <span class="searching-dots">
+            <span></span><span></span><span></span>
+          </span>
+        </p>
+      </div>
+      <div class="skeleton-card skeleton skeleton-stagger skeleton-delay-1 mb-md"></div>
+      <div class="skeleton-card skeleton skeleton-stagger skeleton-delay-2 mb-md"></div>
+      <div class="skeleton-card skeleton skeleton-stagger skeleton-delay-3 mb-md"></div>
     `;
   }
 
   try {
     const data = await api.search(params);
     state.searchResults = data;
+    // Brief delay for smooth transition
+    if (resultsContainer) {
+      resultsContainer.classList.add('switching');
+      await new Promise(r => requestAnimationFrame(r));
+    }
     renderResults();
   } catch (err) {
     const resultsContainer = document.getElementById('results-container');
     if (resultsContainer) {
       resultsContainer.innerHTML = `
-        <div class="error-banner">
+        <div class="error-banner empty-state-entrance">
           <p>搜索失败：${escapeHtml(err.message)}</p>
         </div>
       `;
     }
+  } finally {
+    if (searchBtn) searchBtn.classList.remove('loading');
+    if (searchBar) searchBar.classList.remove('searching');
   }
 }
 
@@ -261,8 +294,8 @@ function renderResults() {
   const data = state.searchResults;
   if (!data) {
     container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
+      <div class="empty-state empty-state-entrance">
+        <div class="empty-state-icon animated">🔍</div>
         <h3>输入关键词开始搜索</h3>
       </div>
     `;
@@ -277,8 +310,8 @@ function renderResults() {
 
   if (total === 0) {
     container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
+      <div class="empty-state empty-state-entrance">
+        <div class="empty-state-icon animated">📭</div>
         <h3>未找到相关资源</h3>
       </div>
     `;
@@ -290,14 +323,17 @@ function renderResults() {
   } else {
     renderListResults(container, data);
   }
+
+  // Remove switching class for smooth transition
+  container.classList.remove('switching');
 }
 
 function renderListResults(container, data) {
   const results = data.results || [];
   let html = '';
 
-  results.forEach((result) => {
-    html += renderResultCard(result);
+  results.forEach((result, i) => {
+    html += renderResultCard(result, i);
   });
 
   // Check all bar if there are links
@@ -367,9 +403,10 @@ function renderMergedResults(container, data) {
     html += `<div class="merged-group">
       <div class="merged-group-header">${escapeHtml(label)} <span class="tag tag-coral">${links.length}</span></div>`;
 
-    links.forEach((link) => {
+    links.forEach((link, i) => {
+      const delayClass = i <= 12 ? `card-delay-${i}` : 'card-delay-12';
       html += `
-        <div class="merged-card" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
+        <div class="merged-card merged-card-entrance ${delayClass}" data-url="${escapeHtml(link.url)}" data-password="${escapeHtml(link.password || '')}">
           <div class="result-card-header">
             <div>
               <div class="result-title" title="${escapeHtml(link.note || link.url)}">${escapeHtml(link.note || link.url)}</div>
@@ -402,10 +439,11 @@ function bindMergeTabs() {
   });
 }
 
-function renderResultCard(result) {
+function renderResultCard(result, index = 0) {
   const links = result.links || [];
   const tags = result.tags || [];
   const images = result.images || [];
+  const delayClass = index <= 12 ? `card-delay-${index}` : 'card-delay-12';
 
   let linksHtml = '';
   if (links.length > 0) {
@@ -457,7 +495,7 @@ function renderResultCard(result) {
   }
 
   return `
-    <div class="result-card">
+    <div class="result-card result-card-entrance ${delayClass}">
       <div class="result-card-header">
         <div>
           <div class="result-title" title="${escapeHtml(result.title || '无标题')}">${escapeHtml(result.title || '无标题')}</div>
@@ -650,11 +688,15 @@ function bindResultEvents() {
       const text = btn.dataset.copy;
       if (text) {
         copyToClipboard(text);
-        btn.classList.add('copied');
-        btn.textContent = '已复制';
+        btn.classList.add('copied', 'ripple');
+        btn.textContent = '已复制 ✓';
         setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.textContent = '复制';
+          btn.classList.remove('copied', 'ripple');
+          if (btn.getAttribute('data-copy') && !btn.closest('.link-password')) {
+            btn.textContent = '复制链接';
+          } else {
+            btn.textContent = '复制';
+          }
         }, 2000);
       }
     });

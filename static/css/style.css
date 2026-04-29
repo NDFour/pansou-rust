@@ -575,12 +575,55 @@ code, .code {
   border-radius: 8px;
   padding: 10px 20px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.15s ease;
   white-space: nowrap;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
 }
 
 .search-bar-btn:hover {
   background: var(--color-coral);
+}
+
+.search-bar-btn:active {
+  transform: scale(0.96);
+}
+
+.search-bar-btn.loading {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.search-bar-btn .btn-text {
+  transition: opacity 0.2s ease;
+}
+
+.search-bar-btn.loading .btn-text {
+  opacity: 0.4;
+}
+
+.search-bar-btn .btn-spinner {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.search-bar-btn.loading .btn-spinner {
+  display: flex;
+}
+
+.btn-spinner-icon {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 
 /* --- Filter Bar --- */
@@ -695,11 +738,13 @@ code, .code {
   border-radius: var(--radius-md);
   padding: var(--space-xl);
   margin-bottom: var(--space-md);
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
 }
 
 .result-card:hover {
   box-shadow: var(--shadow-whisper);
+  transform: translateY(-2px);
+  border-color: var(--color-ring-warm);
 }
 
 .result-card-header {
@@ -944,10 +989,13 @@ code, .code {
   border-radius: var(--radius-md);
   padding: var(--space-lg);
   margin-bottom: var(--space-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
 }
 
 .merged-card:hover {
   box-shadow: var(--shadow-whisper);
+  transform: translateY(-1px);
+  border-color: var(--color-ring-warm);
 }
 
 /* --- Auth Pages --- */
@@ -1134,6 +1182,47 @@ code, .code {
   border-radius: var(--radius-md);
 }
 
+/* Staggered skeleton entrance */
+.skeleton-stagger {
+  opacity: 0;
+  animation: skeletonIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.skeleton-delay-1 { animation-delay: 0.05s; }
+.skeleton-delay-2 { animation-delay: 0.12s; }
+.skeleton-delay-3 { animation-delay: 0.19s; }
+
+@keyframes skeletonIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Searching dots animation */
+.searching-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.searching-dots span {
+  width: 6px;
+  height: 6px;
+  background: var(--color-brand);
+  border-radius: 50%;
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+
+.searching-dots span:nth-child(1) { animation-delay: 0.0s; }
+.searching-dots span:nth-child(2) { animation-delay: 0.2s; }
+.searching-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+  40%           { transform: scale(1);   opacity: 1; }
+}
+
+/* Spinner (enhanced with subtle pulse) */
 .spinner {
   display: inline-block;
   width: 20px;
@@ -1144,10 +1233,23 @@ code, .code {
   animation: spin 0.6s linear infinite;
 }
 
+.spinner-lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Search bar loading state */
+.search-bar.searching {
+  border-color: var(--color-ring-warm);
+  box-shadow: var(--shadow-ring) var(--color-ring-warm), 0 0 0 3px rgba(201, 100, 66, 0.12);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* --- Empty State --- */
@@ -1162,6 +1264,16 @@ code, .code {
   opacity: 0.6;
 }
 
+.empty-state-icon.animated {
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-8px) rotate(-3deg); }
+  75%      { transform: translateY(4px) rotate(3deg); }
+}
+
 .empty-state h3 {
   font-family: var(--font-serif);
   font-size: 1.25rem;
@@ -1173,6 +1285,110 @@ code, .code {
   color: var(--color-olive);
   max-width: 400px;
   margin: 0 auto;
+}
+
+.empty-state-entrance {
+  animation: emptyStateIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes emptyStateIn {
+  from { opacity: 0; transform: scale(0.92) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* --- Card Entrance Animations --- */
+.result-card-entrance {
+  opacity: 0;
+  animation: cardIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.merged-card-entrance {
+  opacity: 0;
+  animation: mergedCardIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes mergedCardIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Staggered delays for cards */
+.card-delay-0  { animation-delay: 0.02s; }
+.card-delay-1  { animation-delay: 0.07s; }
+.card-delay-2  { animation-delay: 0.12s; }
+.card-delay-3  { animation-delay: 0.17s; }
+.card-delay-4  { animation-delay: 0.22s; }
+.card-delay-5  { animation-delay: 0.27s; }
+.card-delay-6  { animation-delay: 0.32s; }
+.card-delay-7  { animation-delay: 0.37s; }
+.card-delay-8  { animation-delay: 0.42s; }
+.card-delay-9  { animation-delay: 0.47s; }
+.card-delay-10 { animation-delay: 0.51s; }
+.card-delay-11 { animation-delay: 0.55s; }
+.card-delay-12 { animation-delay: 0.59s; }
+
+/* --- Filter Chip Pop --- */
+.filter-chip.pop {
+  animation: chipPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes chipPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* --- Copy Success Ripple --- */
+.copy-btn.ripple {
+  animation: copyRipple 0.5s ease;
+}
+
+@keyframes copyRipple {
+  0%   { box-shadow: 0 0 0 0 rgba(107, 142, 90, 0.5); }
+  50%  { box-shadow: 0 0 0 8px rgba(107, 142, 90, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(107, 142, 90, 0); }
+}
+
+/* --- View Tab Transition --- */
+#results-container {
+  transition: opacity 0.15s ease;
+}
+
+#results-container.switching {
+  opacity: 0.4;
+}
+
+/* --- Hero Search Entrance --- */
+.hero-heading {
+  animation: headingIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes headingIn {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-subtitle {
+  animation: subtitleIn 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes subtitleIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-search {
+  animation: searchIn 0.7s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes searchIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Error State --- */
