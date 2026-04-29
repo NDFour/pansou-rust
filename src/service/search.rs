@@ -78,6 +78,7 @@ impl SearchService {
 
         info!("合并搜索结果: tg: {:?}, plugin: {:?}", tg_results.len(), native_plugin_results.len());
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
+        // 按照多种规则排序
         sort_results_by_time_and_keywords(&mut all_results);
 
         let total = all_results.len();
@@ -254,13 +255,17 @@ fn link_type(url: &str) -> String {
     "others".into()
 }
 
-/// 合并搜索结果，按照时间排序
+/// 合并搜索结果
+/// 如果结果的唯一标识相同，则保留完整性得分更高的结果
+/// 如果结果的唯一标识为空，则根据标题和频道生成唯一标识
+/// 如果结果的唯一标识为空，则根据标题和频道生成唯一标识
 fn merge_search_results(existing: Vec<SearchResult>, new_results: Vec<SearchResult>) -> Vec<SearchResult> {
     let mut map = HashMap::<String, SearchResult>::new();
     for r in existing.into_iter().chain(new_results.into_iter()) {
         let key = if !r.unique_id.is_empty() { r.unique_id.clone() } else if !r.message_id.is_empty() { r.message_id.clone() } else { format!("title_{}_{}", r.title, r.channel) };
         if let Some(old) = map.get(&key) {
             if completeness(&r) > completeness(old) {
+                // 保留完整性得分更高的结果
                 map.insert(key, r);
             }
         } else {
@@ -268,7 +273,6 @@ fn merge_search_results(existing: Vec<SearchResult>, new_results: Vec<SearchResu
         }
     }
     let mut merged = map.into_values().collect::<Vec<_>>();
-    merged.sort_by(|a, b| b.datetime.cmp(&a.datetime));
     merged
 }
 
