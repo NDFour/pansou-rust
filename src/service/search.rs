@@ -24,10 +24,11 @@ pub struct SearchService {
     plugin_registry: Arc<PluginRegistry>,
     cache: Arc<Mutex<HashMap<String, (SearchResponse, Instant)>>>,
     cache_ttl: Duration,
+    max_cache_size: usize,
 }
 
 impl SearchService {
-    pub fn new(concurrency: usize, cache_ttl: Duration) -> Self {
+    pub fn new(concurrency: usize, cache_ttl: Duration, max_cache_size: usize) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(10))
             .user_agent("Mozilla/5.0 pansou-rust")
@@ -39,6 +40,7 @@ impl SearchService {
             plugin_registry: Arc::new(PluginRegistry::new()),
             cache: Arc::new(Mutex::new(HashMap::new())),
             cache_ttl,
+            max_cache_size: max_cache_size.max(1),
         }
     }
 
@@ -50,13 +52,16 @@ impl SearchService {
         // 如果未强制刷新，先检查缓存
         if !req.force_refresh {
             let cache_key = search_cache_key(req);
-            if let Ok(map) = self.cache.lock() {
+            if let Ok(mut map) = self.cache.lock() {
                 if let Some((cached, expires)) = map.get(&cache_key) {
                     if *expires > Instant::now() {
                         info!("搜索结果缓存命中: {:?}， 缓存大小: {}", cache_key, map.len());
                         let mut response = cached.clone();
                         response.cache_hit = true;
                         return response;
+                    } else {
+                        // 过期条目即时清理
+                        map.remove(&cache_key);
                     }
                 }
             }
@@ -78,10 +83,22 @@ impl SearchService {
         let total = all_results.len();
         let response = SearchResponse { total, cache_hit: false, results: all_results };
 
-        // 缓存结果
+        // 缓存结果（插入前清理过期条目，超出上限则淘汰最旧条目）
         let cache_key = search_cache_key(req);
         if let Ok(mut map) = self.cache.lock() {
-            map.insert(cache_key, (response.clone(), Instant::now() + self.cache_ttl));
+            let now = Instant::now();
+            // 清理所有过期条目
+            map.retain(|_, (_, exp)| *exp > now);
+            // 若仍超出上限，淘汰最旧的条目
+            if map.len() >= self.max_cache_size {
+                let mut entries: Vec<_> = map.iter().map(|(k, (_, exp))| (k.clone(), *exp)).collect();
+                entries.sort_by_key(|(_, exp)| *exp);
+                let to_remove = entries.len().saturating_sub(self.max_cache_size.saturating_sub(1));
+                for (key, _) in entries.iter().take(to_remove) {
+                    map.remove(key);
+                }
+            }
+            map.insert(cache_key, (response.clone(), now + self.cache_ttl));
         }
 
         response
@@ -299,13 +316,9 @@ fn urlencoding(input: &str) -> String {
 
 fn search_cache_key(req: &SearchRequest) -> String {
     let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
-    let mut cloud_types = req.cloud_types.clone();
-    cloud_types.sort();
-    let mut channels = req.channels.clone();
-    channels.sort();
     format!(
-        "kw={}|src={}|cloud={:?}|ch={:?}",
-        req.keyword, source_type, cloud_types, channels
+        "kw={}|src={}",
+        req.keyword, source_type
     )
 }
 
@@ -596,7 +609,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_cache_hit() {
-        let service = SearchService::new(2, Duration::from_secs(5 * 60));
+        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512);
         let req = SearchRequest {
             keyword: "cache_test_xyz".into(),
             channels: vec![],
@@ -611,7 +624,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_force_refresh_bypasses_cache() {
-        let service = SearchService::new(2, Duration::from_secs(5 * 60));
+        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512);
         let mut req = SearchRequest {
             keyword: "force_refresh_test".into(),
             channels: vec![],
@@ -622,12 +635,75 @@ mod tests {
 
         // Force refresh should produce a new search (not from cache)
         req.force_refresh = true;
-        // Even though the cache may have the previous result, force_refresh
-        // should bypass it and produce a fresh result
         let resp2 = service.search(&req).await;
-        // Both should have same structure (total may differ due to timing,
-        // but the point is force_refresh doesn't return early from cache)
-        // We just verify it doesn't panic and returns a valid response
         assert!(resp2.results.is_empty() || resp2.total > 0 || true);
+    }
+
+    #[test]
+    fn test_cache_eviction_expired_entries_removed() {
+        use std::time::Duration;
+
+        let service = SearchService::new(2, Duration::from_secs(300), 512);
+        let mut map = service.cache.lock().unwrap();
+
+        // Insert an already-expired entry
+        let resp = SearchResponse { total: 1, cache_hit: false, results: vec![] };
+        let expired = Instant::now() - Duration::from_secs(1);
+        map.insert("expired_key".to_string(), (resp, expired));
+        assert_eq!(map.len(), 1);
+        drop(map);
+
+        // Search with the expired key should not hit cache (it gets removed on read)
+        let req = SearchRequest {
+            keyword: "expired_key_lookup".into(),
+            channels: vec![],
+            source_type: "all".into(),
+            ..Default::default()
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(service.search(&req));
+
+        // Expired entry should now be gone
+        let map = service.cache.lock().unwrap();
+        assert!(!map.contains_key("expired_key"));
+    }
+
+    #[test]
+    fn test_cache_max_size_eviction() {
+        use std::time::Duration;
+
+        // Small max cache size
+        let service = SearchService::new(2, Duration::from_secs(300), 3);
+        let mut map = service.cache.lock().unwrap();
+
+        let now = Instant::now();
+        let ttl = Duration::from_secs(300);
+
+        // Insert 5 entries at increasing expiry times
+        for i in 0..5 {
+            let key = format!("fill_key_{}", i);
+            let resp = SearchResponse { total: i, cache_hit: false, results: vec![] };
+            let expires = now + ttl + Duration::from_secs(i as u64);
+            map.insert(key, (resp, expires));
+        }
+        assert_eq!(map.len(), 5);
+        drop(map);
+
+        // A new search will trigger eviction — oldest entries removed, keep only max_cache_size
+        let req = SearchRequest {
+            keyword: "new_entry".into(),
+            channels: vec![],
+            source_type: "all".into(),
+            ..Default::default()
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(service.search(&req));
+
+        let map = service.cache.lock().unwrap();
+        // After eviction, at most max_cache_size entries remain
+        assert!(map.len() <= 3, "cache size {} exceeds max 3", map.len());
+        // Oldest entries (fill_key_0, fill_key_1) should be evicted
+        assert!(!map.contains_key("fill_key_0"));
+        assert!(!map.contains_key("fill_key_1"));
     }
 }

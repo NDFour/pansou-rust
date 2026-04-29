@@ -13,5 +13,9 @@ log_file: logs/app.log
 
 # 查询 tg 时的并发数
 concurrency: 2
+# 搜索结果内存缓存最大数量
+# 超过该数量后，会淘汰最旧的条目
+max_cache_size: 1024
 # 搜索结果缓存时间，单位：秒
+# 超过该时间后，会淘汰该条目
 cache_ttl: 300

@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub log_file: String,
     pub concurrency: usize,
     pub cache_ttl: u64,
+    pub max_cache_size: usize,
     pub channels: Vec<String>,
 }
 
@@ -21,6 +22,7 @@ impl Default for AppConfig {
             log_file: String::new(),
             concurrency: 3,
             cache_ttl: 300, // 5 minutes
+            max_cache_size: 512,
             channels: vec!["tgsearchers6".to_string()],
         }
     }
