@@ -203,7 +203,7 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
 }
 
 fn extract_links(content: &str) -> Vec<crate::model::Link> {
-    let Ok(re) = Regex::new(r#"https?://[^\s"'<>)]+"#) else { return vec![] };
+    let Ok(re) = Regex::new(r#"https?:\/\/[a-zA-Z0-9/_.\-=&#?%+~]*?(?=https?:\/\/|[^\sa-zA-Z0-9/_.\-=&#?%+~]|$)"#) else { return vec![] };
     let mut seen = HashSet::new();
     let mut links = Vec::new();
     for m in re.find_iter(content) {
