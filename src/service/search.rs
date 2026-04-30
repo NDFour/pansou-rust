@@ -181,7 +181,11 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
         let text = msg.select(&text_sel).next().map(|n| n.text().collect::<String>()).unwrap_or_default();
-        let title = text.lines().next().unwrap_or_default().trim().to_string();
+        let mut title = text.lines().next().unwrap_or_default().trim().to_string();
+        // title 长度超过 48 则截取前 48 个字符
+        if title.len() > 48 {
+            title = title[..48].to_string() + "...";
+        }
         let links = extract_links(&text);
         if links.is_empty() {
             warn!("no links found in tg message: {}", text);
