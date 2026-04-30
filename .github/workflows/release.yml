@@ -15,23 +15,31 @@ jobs:
         include:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            artifact: pansou-linux-amd64
+            artifact-suffix: pansou-linux-amd64
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
-            artifact: pansou-linux-arm64
+            artifact-suffix: pansou-linux-arm64
             use-cross: true
           - target: x86_64-apple-darwin
             os: macos-latest
-            artifact: pansou-darwin-amd64
+            artifact-suffix: pansou-darwin-amd64
           - target: aarch64-apple-darwin
             os: macos-latest
-            artifact: pansou-darwin-arm64
+            artifact-suffix: pansou-darwin-arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            artifact: pansou-windows-amd64.exe
+            artifact-suffix: pansou-windows-amd64.exe
 
     runs-on: ${{ matrix.os }}
     steps:
+      - name: 提取版本号
+        shell: bash
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "版本号: $VERSION"
+
       - name: 检出代码
         uses: actions/checkout@v4
 
@@ -62,17 +70,19 @@ jobs:
       - name: 重命名产物
         shell: bash
         run: |
+          ARTIFACT="pansou-v${VERSION}-${{ matrix.artifact-suffix }}"
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp target/${{ matrix.target }}/release/pansou-rust.exe "${{ matrix.artifact }}"
+            cp target/${{ matrix.target }}/release/pansou-rust.exe "${ARTIFACT}"
           else
-            cp target/${{ matrix.target }}/release/pansou-rust "${{ matrix.artifact }}"
+            cp target/${{ matrix.target }}/release/pansou-rust "${ARTIFACT}"
           fi
+          echo "ARTIFACT=$ARTIFACT" >> $GITHUB_ENV
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
 
   release:
     needs: build
