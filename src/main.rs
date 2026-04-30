@@ -9,7 +9,7 @@ use std::{sync::Arc, time::Duration};
 
 use axum::{
     http::{header, StatusCode, Uri},
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     routing::{get, post},
     Router,
 };
@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let api_router = Router::new()
-        .route("/", get(|| async { Redirect::permanent("/index.html") }))
+        .route("/", get(serve_embedded))
         .route("/api/search", get(handlers::search_get_handler).post(handlers::search_post_handler))
         .route("/api/check/links", post(handlers::check_handler))
         .route("/api/health", get(handlers::health_handler))
