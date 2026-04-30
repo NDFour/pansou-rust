@@ -125,7 +125,7 @@ impl SearchService {
                 let url = format!("https://t.me/s/{}?q={}", channel, urlencoding(&kw));
                 let resp = client.get(&url).send().await?;
                 let body = resp.text().await?;
-                Ok::<_, reqwest::Error>(parse_tg_results(&body, &channel))
+                Ok::<_, reqwest::Error>(parse_tg_results(&body, &channel, &kw))
             });
         }
 
@@ -153,7 +153,7 @@ impl SearchService {
 
 }
 
-fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
+fn parse_tg_results(html: &str, channel: &str, keyword: &str) -> Vec<SearchResult> {
     let doc = Html::parse_document(html);
     let (Ok(wrap_sel), Ok(msg_sel), Ok(date_sel), Ok(text_sel)) = (
         Selector::parse(".tgme_widget_message_wrap"),
@@ -183,12 +183,16 @@ fn parse_tg_results(html: &str, channel: &str) -> Vec<SearchResult> {
         let text = msg.select(&text_sel).next().map(|n| n.text().collect::<String>()).unwrap_or_default();
         let mut title = text.lines().next().unwrap_or_default().trim().to_string();
         // title 长度超过 48 则截取前 48 个字符
-        if title.len() > 48 {
-            title = title[..48].to_string() + "...";
+        if title.chars().count() > 48 {
+            title = title.chars().take(48).collect::<String>() + "...";
         }
+        if !title.contains(keyword) {
+            continue;
+        }
+
         let links = extract_links(&text);
         if links.is_empty() {
-            warn!("no links found in tg message: {}", text);
+            warn!("[{}] no links found in tg message: {}", channel, text);
             continue;
         }
         results.push(SearchResult {

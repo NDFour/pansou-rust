@@ -4,8 +4,6 @@ channels:
   - tgsearchers6
   - tgsearchers4
   - Aliyun_4K_Movies
-  - bdbdndn11
-  - yunpanx
 
 log_level: info
 # 日志文件路径，留空则不生成文件
