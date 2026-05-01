@@ -1,6 +1,3 @@
-mod alupan;
-mod jikepan;
-mod pan666;
 mod panshushu;
 mod sosoyunpan;
 mod yunsou;
@@ -36,10 +33,6 @@ impl PluginRegistry {
     pub fn new() -> Self {
         let mut registry = Self { plugins: Vec::new() };
         registry.register(Arc::new(panshushu::PanshushuPlugin));
-        registry.register(Arc::new(jikepan::JikepanPlugin));
-        registry.register(Arc::new(pan666::Pan666Plugin));
-        // 暂时禁用 alupan 插件，因为其网站经常无法访问
-        // registry.register(Arc::new(alupan::AlupanPlugin));
         registry.register(Arc::new(yunsou::YunsouPlugin));
         registry.register(Arc::new(sosoyunpan::SosoyunpanPlugin));
         registry

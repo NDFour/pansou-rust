@@ -3,6 +3,7 @@ use chrono::{NaiveDate, Utc};
 use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
+use tracing::debug;
 
 use crate::model::{Link, SearchResult};
 
@@ -10,7 +11,7 @@ use super::{filter_results_by_keyword, SearchPlugin};
 
 pub struct YunsouPlugin;
 
-const SEARCH_URL_TEMPLATE: &str = "https://yunsou.xyz/s/%s.html";
+const SEARCH_URL_TEMPLATE: &str = "https://wpys.cc/s/%s.html";
 
 #[derive(Deserialize)]
 struct YunsouItem {
@@ -44,6 +45,7 @@ impl SearchPlugin for YunsouPlugin {
     }
 
     async fn search(&self, keyword: &str, client: &Client) -> Vec<SearchResult> {
+        debug!(">>> {} 开始搜索, keyword: {}", self.name(), keyword);
         let search_url = SEARCH_URL_TEMPLATE.replace("%s", &urlencoding(keyword));
         let resp = match client
             .get(&search_url)
@@ -57,6 +59,8 @@ impl SearchPlugin for YunsouPlugin {
             Ok(r) => r,
             Err(_) => return vec![],
         };
+
+        debug!("<<< {} 响应 status code: {}", self.name(), resp.status());
 
         let body = match resp.text().await {
             Ok(b) => b,
