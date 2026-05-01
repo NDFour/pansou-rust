@@ -1,7 +1,9 @@
+pub mod python_sink;
+
 use std::{sync::Arc, time::Instant};
 
 use async_trait::async_trait;
-use tracing::info;
+use tracing::debug;
 
 use crate::model::SearchResponse;
 
@@ -35,7 +37,7 @@ impl PostSearchPluginRegistry {
             tokio::spawn(async move {
                 let start = Instant::now();
                 plugin.on_search_completed(&keyword, &response).await;
-                info!(
+                debug!(
                     "后置插件 [{}] 完成，耗时 {:?}",
                     name,
                     start.elapsed()

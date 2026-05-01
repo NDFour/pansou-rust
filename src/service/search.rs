@@ -14,6 +14,7 @@ use tracing::{info, warn};
 use crate::model::{SearchRequest, SearchResponse, SearchResult};
 
 use crate::plugin::PluginRegistry;
+use crate::post_search::python_sink::PythonSinkPlugin;
 use crate::post_search::PostSearchPluginRegistry;
 
 use tokio::task::JoinSet;
@@ -30,17 +31,23 @@ pub struct SearchService {
 }
 
 impl SearchService {
-    pub fn new(concurrency: usize, cache_ttl: Duration, max_cache_size: usize) -> Self {
+    pub fn new(concurrency: usize, cache_ttl: Duration, max_cache_size: usize, post_search_endpoint: &str) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(10))
             .user_agent("Mozilla/5.0 pansou-rust")
             .build()
             .unwrap_or_else(|_| Client::new());
+
+        let mut post_registry = PostSearchPluginRegistry::new();
+        if !post_search_endpoint.is_empty() {
+            post_registry.register(Arc::new(PythonSinkPlugin::new(post_search_endpoint.to_string())));
+        }
+
         Self {
             client,
             concurrency: concurrency.max(1),
             plugin_registry: Arc::new(PluginRegistry::new()),
-            post_search_plugin_registry: Arc::new(PostSearchPluginRegistry::new()),
+            post_search_plugin_registry: Arc::new(post_registry),
             cache: Arc::new(Mutex::new(HashMap::new())),
             cache_ttl,
             max_cache_size: max_cache_size.max(1),
@@ -600,7 +607,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_cache_hit() {
-        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512);
+        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512, "");
         let req = SearchRequest {
             keyword: "cache_test_xyz".into(),
             channels: vec![],
@@ -615,7 +622,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_force_refresh_bypasses_cache() {
-        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512);
+        let service = SearchService::new(2, Duration::from_secs(5 * 60), 512, "");
         let mut req = SearchRequest {
             keyword: "force_refresh_test".into(),
             channels: vec![],
@@ -634,7 +641,7 @@ mod tests {
     fn test_cache_eviction_expired_entries_removed() {
         use std::time::Duration;
 
-        let service = SearchService::new(2, Duration::from_secs(300), 512);
+        let service = SearchService::new(2, Duration::from_secs(300), 512, "");
         let mut map = service.cache.lock().unwrap();
 
         // Insert an already-expired entry
@@ -664,7 +671,7 @@ mod tests {
         use std::time::Duration;
 
         // Small max cache size
-        let service = SearchService::new(2, Duration::from_secs(300), 3);
+        let service = SearchService::new(2, Duration::from_secs(300), 3, "");
         let mut map = service.cache.lock().unwrap();
 
         let now = Instant::now();

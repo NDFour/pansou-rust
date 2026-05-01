@@ -11,6 +11,8 @@ pub struct AppConfig {
     pub cache_ttl: u64,
     pub max_cache_size: usize,
     pub channels: Vec<String>,
+    #[serde(default)]
+    pub post_search_endpoint: String,
 }
 
 impl Default for AppConfig {
@@ -24,6 +26,7 @@ impl Default for AppConfig {
             cache_ttl: 300, // 5 minutes
             max_cache_size: 512,
             channels: vec!["tgsearchers6".to_string()],
+            post_search_endpoint: String::new(),
         }
     }
 }

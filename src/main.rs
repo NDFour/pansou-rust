@@ -86,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
 
     let state = Arc::new(AppState {
         config: config.clone(),
-        search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size),
+        search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size, &config.post_search_endpoint),
         check_service: CheckService::new(),
     });
 
