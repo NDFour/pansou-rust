@@ -6,6 +6,7 @@ use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use tokio::sync::Semaphore;
+use tracing::debug;
 
 use crate::model::{Link, SearchResult};
 
@@ -51,6 +52,7 @@ impl SearchPlugin for AlupanPlugin {
                 Ok(r) => r,
                 Err(_) => return vec![],
             };
+            debug!("{} 请求到html: {}", self.name(), resp.status());
 
             let body = match resp.text().await {
                 Ok(b) => b,
@@ -58,6 +60,8 @@ impl SearchPlugin for AlupanPlugin {
             };
 
             let doc = Html::parse_document(&body);
+            debug!("{} 解析到html: {}", self.name(), body);
+
             let article_sel = match Selector::parse("article.excerpt") {
                 Ok(s) => s,
                 Err(_) => return vec![],
