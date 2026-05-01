@@ -2,6 +2,7 @@ mod config;
 mod handlers;
 mod model;
 mod plugin;
+mod post_search;
 mod assets;
 mod service;
 

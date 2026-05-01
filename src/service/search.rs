@@ -14,6 +14,7 @@ use tracing::{info, warn};
 use crate::model::{SearchRequest, SearchResponse, SearchResult};
 
 use crate::plugin::PluginRegistry;
+use crate::post_search::PostSearchPluginRegistry;
 
 use tokio::task::JoinSet;
 
@@ -22,6 +23,7 @@ pub struct SearchService {
     client: Client,
     concurrency: usize,
     plugin_registry: Arc<PluginRegistry>,
+    post_search_plugin_registry: Arc<PostSearchPluginRegistry>,
     cache: Arc<Mutex<HashMap<String, (SearchResponse, Instant)>>>,
     cache_ttl: Duration,
     max_cache_size: usize,
@@ -38,6 +40,7 @@ impl SearchService {
             client,
             concurrency: concurrency.max(1),
             plugin_registry: Arc::new(PluginRegistry::new()),
+            post_search_plugin_registry: Arc::new(PostSearchPluginRegistry::new()),
             cache: Arc::new(Mutex::new(HashMap::new())),
             cache_ttl,
             max_cache_size: max_cache_size.max(1),
@@ -46,6 +49,10 @@ impl SearchService {
 
     pub fn plugin_registry(&self) -> Arc<PluginRegistry> {
         self.plugin_registry.clone()
+    }
+
+    pub fn post_search_plugin_registry(&self) -> Arc<PostSearchPluginRegistry> {
+        self.post_search_plugin_registry.clone()
     }
 
     pub async fn search(&self, req: &SearchRequest) -> SearchResponse {
@@ -100,6 +107,10 @@ impl SearchService {
             }
             map.insert(cache_key, (response.clone(), now + self.cache_ttl));
         }
+
+        // 触发后置插件（fire-and-forget，不阻塞响应）
+        self.post_search_plugin_registry
+            .fire_all(&req.keyword, response.clone());
 
         response
     }
