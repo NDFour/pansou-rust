@@ -3,7 +3,7 @@ use chrono::{NaiveDate, Utc};
 use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::model::{Link, SearchResult};
 
@@ -49,15 +49,16 @@ impl SearchPlugin for YunsouPlugin {
         let search_url = SEARCH_URL_TEMPLATE.replace("%s", &urlencoding(keyword));
         let resp = match client
             .get(&search_url)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-            .header("Referer", "https://yunsou.xyz/")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36")
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
             .send()
             .await
         {
             Ok(r) => r,
-            Err(_) => return vec![],
+            Err(e) => {
+                warn!("<<< {} 请求失败, error: {}", self.name(), e);
+                return vec![];
+            },
         };
 
         debug!("<<< {} 响应 status code: {}", self.name(), resp.status());
@@ -115,7 +116,7 @@ impl SearchPlugin for YunsouPlugin {
                 Some(SearchResult {
                     message_id: format!("yunsou-{}", item.id),
                     unique_id: format!("yunsou-{}", item.id),
-                    channel: String::new(),
+                    channel: self.name().to_string(),
                     channel_score: self.channel_score(),
                     datetime,
                     title: item.title,
