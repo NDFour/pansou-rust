@@ -78,7 +78,7 @@ impl SearchService {
 
         let mut all_results = merge_search_results(tg_results, native_plugin_results);
         // 按照多种规则排序
-        sort_results_by_time_and_keywords(&mut all_results);
+        sort_results_by_time_and_keywords(&mut all_results, &req.keyword);
 
         let total = all_results.len();
         let response = SearchResponse { total, cache_hit: false, results: all_results };
@@ -295,20 +295,24 @@ fn completeness(r: &SearchResult) -> usize {
     score + r.tags.len() + (r.title.len() / 10)
 }
 
-fn sort_results_by_time_and_keywords(results: &mut [SearchResult]) {
-    results.sort_by(|a, b| total_score(b).partial_cmp(&total_score(a)).unwrap_or(Ordering::Equal));
+fn sort_results_by_time_and_keywords(results: &mut [SearchResult], keyword: &str) {
+    results.sort_by(|a, b| total_score(b, keyword).partial_cmp(&total_score(a, keyword)).unwrap_or(Ordering::Equal));
 }
 
 /// 总得分 = 时间得分 + 频道得分
-fn total_score(r: &SearchResult) -> f64 {
-    time_score(r.datetime) + r.channel_score as f64
+fn total_score(r: &SearchResult, keyword: &str) -> f64 {
+    time_score(r.datetime) + r.channel_score as f64 + keyword_score(&r.title, keyword)
 }
 
 /// 时间得分 = 发布时间与当前时间的差值
 /// 时间越近，得分越高
 fn time_score(datetime: DateTime<Utc>) -> f64 {
     let diff_days = (Utc::now() - datetime).num_hours() as f64 / 24.0;
-    if diff_days <= 7.0 { 30.0 } else if diff_days <= 30.0 { 25.0 } else if diff_days <= 90.0 { 20.0 } else if diff_days <= 365.0 { 10.0 } else { 0.0 }
+    if diff_days <= 7.0 { 30.0 } else if diff_days <= 30.0 { 28.0 } else if diff_days <= 90.0 { 25.0 } else if diff_days <= 365.0 { 20.0 } else if diff_days <= 730.0 { 15.0 } else { 10.0 }
+}
+
+fn keyword_score(title: &str, keyword: &str) -> f64 {
+    if title.contains(keyword) { 10.0 } else { 0.0 }
 }
 
 fn urlencoding(input: &str) -> String {
@@ -502,26 +506,26 @@ mod tests {
     #[test]
     fn test_time_score_recent() {
         let now = Utc::now();
-        assert_eq!(time_score(now), 500.0); // within 1 day
+        assert_eq!(time_score(now), 30.0); // within 1 day
     }
 
     #[test]
     fn test_time_score_old() {
         let old = Utc::now() - chrono::Duration::days(400);
-        assert_eq!(time_score(old), 20.0); // over 365 days
+        assert_eq!(time_score(old), 15.0); // over 365 days
     }
 
     #[test]
     fn test_time_score_week() {
         let week_ago = Utc::now() - chrono::Duration::days(5);
-        assert_eq!(time_score(week_ago), 300.0); // 3-7 days
+        assert_eq!(time_score(week_ago), 30.0); // 3-7 days
     }
 
     #[test]
     fn test_total_score_ordering() {
         let recent = make_result("a", "tg", "t", "", vec![], 0);
         let old = make_result("b", "tg", "t", "", vec![], 400);
-        assert!(total_score(&recent) > total_score(&old));
+        assert!(total_score(&recent, "test") > total_score(&old, "test"));
     }
 
     #[test]

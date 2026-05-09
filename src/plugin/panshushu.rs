@@ -37,7 +37,7 @@ impl SearchPlugin for PanshushuPlugin {
     }
 
     fn channel_score(&self) -> i32 {
-        100
+        40
     }
 
     async fn search(&self, keyword: &str, client: &Client) -> Vec<SearchResult> {
