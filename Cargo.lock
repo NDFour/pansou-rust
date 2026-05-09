@@ -1018,7 +1018,11 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "pansou-rust"
+<<<<<<< HEAD
 version = "1.0.13"
+=======
+version = "1.0.14"
+>>>>>>> 08b737456d50e9a416f0ce899853e60290482cc6
 dependencies = [
  "anyhow",
  "async-trait",

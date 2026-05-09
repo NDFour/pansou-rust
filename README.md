@@ -38,17 +38,36 @@ host: 0.0.0.0
 port: 8888
 channels:
   - tgsearchers6
-  - tgsearchers4
+  - sou1xia
 log_level: info
 log_file: logs/app.log
-concurrency: 2
+concurrency: 6
+cache_ttl: 300
+max_cache_size: 1024
+
+# 后置插件：搜索完成后将结果推送到落库服务，留空则不启用
+post_search_endpoint: "http://localhost:9999/api/ingest"
 ```
+
+## Python 落库服务
+
+```bash
+cd python-service
+pip install fastapi uvicorn
+python main.py
+```
+
+默认监听 `0.0.0.0:9999`，接收搜索结果的 API 为 `POST /api/ingest`。
+
+数据表结构：`search_results`（结果条目）
 
 ## 说明
 
 - API 路由、请求字段和响应结构与 Go 版本保持兼容。
 - 搜索核心：TG 频道抓取（`t.me/s/{channel}?q=...`）与网盘插件搜索并行执行，结果合并去重、优先级排序、`merged_by_type` 聚合。
-- 网盘插件：`panshushu`、`jikepan`、`pan666`、`alupan`、`yunsou`（`src/plugin/`）。
+- 网盘插件：`panshushu`、`sosoyunpan`（`src/plugin/`）。
+- 后置插件：搜索完成后触发 `PostSearchPlugin`，可用于将结果推送到外部服务落库（`src/post_search/`）。
+- Python 落库服务：`python-service/` 提供接收 API，将搜索结果写入 SQLite（表：`search_results`）。
 - 搜索缓存：搜索结果带 TTL 内存缓存，相同查询直接返回缓存结果，`force_refresh=true` 时强制刷新。
 - 链接检测：标准化、状态机、TTL 内存缓存，批量检测响应结构。
 - 日志：使用 `tracing` 输出到控制台及文件，每次请求自动生成 `request_id` 贯穿上下文。

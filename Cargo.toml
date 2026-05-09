@@ -1,7 +1,6 @@
 [package]
 name = "pansou-rust"
-version = "1.0.13"
-edition = "2021"
+version = "1.0.14"
 
 [dependencies]
 axum = "0.8"

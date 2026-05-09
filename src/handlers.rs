@@ -202,7 +202,7 @@ mod tests {
 
         let config = std::sync::Arc::new(crate::AppState {
             config: AppConfig::default(),
-            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
         });
 
@@ -219,7 +219,7 @@ mod tests {
 
         let config = std::sync::Arc::new(crate::AppState {
             config: AppConfig::default(),
-            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
         });
 
@@ -237,7 +237,7 @@ mod tests {
 
         let config = std::sync::Arc::new(crate::AppState {
             config: AppConfig::default(),
-            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512),
+            search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
         });
 

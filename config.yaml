@@ -19,3 +19,7 @@ max_cache_size: 1024
 # 搜索结果缓存时间，单位：秒
 # 超过该时间后，会淘汰该条目
 cache_ttl: 300
+
+# 后置插件：搜索完成后将结果推送到 Python 服务落库
+# 留空则不启用
+post_search_endpoint: ""
