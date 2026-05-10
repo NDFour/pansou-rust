@@ -65,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
             .with(console_layer)
             .init();
     } else {
-        let file_appender = tracing_appender::rolling::weekly(
+        let file_appender = tracing_appender::rolling::daily(
             std::path::Path::new(&config.log_file).parent().unwrap_or(std::path::Path::new(".")),
             std::path::Path::new(&config.log_file).file_name().unwrap_or(std::ffi::OsStr::new("app.log")),
         );

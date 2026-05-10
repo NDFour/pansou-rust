@@ -61,6 +61,36 @@ python main.py
 
 数据表结构：`search_results`（结果条目）
 
+## Metric 日志日报脚本
+
+日志中 `log_metric_info`（如 click 埋点）可通过脚本统计并推送飞书群消息：
+
+```bash
+python python-service/analyze_metrics.py
+```
+
+默认行为：
+
+- 默认统计当天（可用 `--date YYYY-MM-DD` ）
+- 优先读取 `logs/app.log.YYYY-MM-DD`，不存在则读取 `logs/app.log`
+- 从 `python-service/metric_config.json` 读取飞书 webhook
+
+配置文件示例（`python-service/metric_config.json`）：
+
+```json
+{
+  "feishu_webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/xxx",
+  "top_n": 10,
+  "webhook_timeout_sec": 10
+}
+```
+
+Linux crontab 示例（每天 23:55 执行）：
+
+```bash
+55 23 * * * cd /opt/pansou-rust && /usr/bin/python3 python-service/analyze_metrics.py >> logs/metric-cron.log 2>&1
+```
+
 ## 说明
 
 - API 路由、请求字段和响应结构与 Go 版本保持兼容。

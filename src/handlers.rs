@@ -74,7 +74,7 @@ pub async fn check_handler(
 pub async fn metric_handler(Json(req): Json<MetricRequest>) -> impl IntoResponse {
     match req.metric_type.as_str() {
         "click" => {
-            if req.keyword.trim().is_empty() || req.title.trim().is_empty() || req.url.trim().is_empty() {
+            if req.keyword.trim().is_empty() || req.title.trim().is_empty() || req.url.trim().is_empty() || req.channel.trim().is_empty() {
                 let err = crate::model::ApiErrorResponse {
                     code: 400,
                     message: "keyword、title、url 不能为空".to_string(),

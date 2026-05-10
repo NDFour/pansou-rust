@@ -126,6 +126,7 @@ pub struct MetricRequest {
     pub keyword: String,
     pub title: String,
     pub url: String,
+    pub channel: String
 }
 
 #[cfg(test)]

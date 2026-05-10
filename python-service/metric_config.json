@@ -1,0 +1,5 @@
+{
+  "feishu_webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/please-replace-with-real-webhook",
+  "top_n": 10,
+  "webhook_timeout_sec": 30
+}

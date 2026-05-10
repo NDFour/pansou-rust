@@ -684,11 +684,11 @@ function copyToClipboard(text) {
   }
 }
 
-function trackResultClick(title, url) {
+function trackResultClick(title, url, channel) {
   const keyword = state.currentKeyword?.trim();
-  if (!keyword || !title || !url) return;
+  if (!keyword || !title || !url || !channel) return;
 
-  api.trackClick({ metric_type: 'click', metric_value: 1, keyword, title, url }).catch(() => {
+  api.trackClick({ metric_type: 'click', metric_value: 1, keyword, title, url, channel }).catch(() => {
     // 统计不影响主流程，失败时静默忽略
   });
 }
@@ -701,7 +701,8 @@ function bindResultEvents() {
       const titleEl = card?.querySelector('.result-title');
       const title = titleEl?.textContent?.trim() || linkEl.textContent?.trim() || '';
       const url = linkEl.getAttribute('href') || card?.dataset.url || '';
-      trackResultClick(title, url);
+      const channel = card?.querySelector('.result-channel')?.textContent?.trim() || '';
+      trackResultClick(title, url, channel);
     });
   });
 
