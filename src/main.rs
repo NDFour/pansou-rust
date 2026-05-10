@@ -94,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(serve_embedded))
         .route("/api/search", get(handlers::search_get_handler).post(handlers::search_post_handler))
         .route("/api/check/links", post(handlers::check_handler))
+        .route("/api/stats/metric", post(handlers::metric_handler))
         .route("/api/health", get(handlers::health_handler))
         .fallback(serve_embedded);
 

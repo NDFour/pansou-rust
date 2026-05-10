@@ -7,9 +7,10 @@ use axum::{
     Json,
 };
 use serde_json::{json, Value};
+use tracing::{info, warn};
 
 use crate::{
-    model::{ApiResponse, CheckRequest, SearchRequest},
+    model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest},
     AppState,
 };
 
@@ -68,6 +69,29 @@ pub async fn check_handler(
     }
     let response = state.check_service.check(&req.items).await;
     (StatusCode::OK, Json(json!(response)))
+}
+
+pub async fn metric_handler(Json(req): Json<MetricRequest>) -> impl IntoResponse {
+    match req.metric_type.as_str() {
+        "click" => {
+            if req.keyword.trim().is_empty() || req.title.trim().is_empty() || req.url.trim().is_empty() {
+                let err = crate::model::ApiErrorResponse {
+                    code: 400,
+                    message: "keyword、title、url 不能为空".to_string(),
+                };
+                return (StatusCode::BAD_REQUEST, Json(json!(err)));
+            }
+            log_metric(&req);
+        }
+        _ => {
+            warn!("无法识别的 metric_type: {}", req.metric_type);
+        }
+    }
+    (StatusCode::OK, Json(json!({"code": 0, "message": "success"})))
+}
+
+fn log_metric(req: &MetricRequest) {
+    info!("log_metric_info: {:?}", serde_json::to_string(req).unwrap());
 }
 
 fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -> SearchRequest {

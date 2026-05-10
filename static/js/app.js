@@ -30,7 +30,7 @@ const api = {
     const url = API_BASE + path;
     const headers = { 'Content-Type': 'application/json' };
 
-    const config = { method, headers };
+    const config = { method, headers, ...opts };
     if (body && method !== 'GET') {
       config.body = JSON.stringify(body);
     }
@@ -84,6 +84,11 @@ const api = {
   async health() {
     const data = await this.get('/health');
     return data;
+  },
+
+  // Click stats
+  async trackClick(payload) {
+    return this.post('/stats/metric', payload, { keepalive: true });
   },
 };
 
@@ -679,7 +684,27 @@ function copyToClipboard(text) {
   }
 }
 
+function trackResultClick(title, url) {
+  const keyword = state.currentKeyword?.trim();
+  if (!keyword || !title || !url) return;
+
+  api.trackClick({ metric_type: 'click', metric_value: 1, keyword, title, url }).catch(() => {
+    // 统计不影响主流程，失败时静默忽略
+  });
+}
+
 function bindResultEvents() {
+  // Result link click stats
+  document.querySelectorAll('.link-url').forEach((linkEl) => {
+    linkEl.addEventListener('click', () => {
+      const card = linkEl.closest('.merged-card');
+      const titleEl = card?.querySelector('.result-title');
+      const title = titleEl?.textContent?.trim() || linkEl.textContent?.trim() || '';
+      const url = linkEl.getAttribute('href') || card?.dataset.url || '';
+      trackResultClick(title, url);
+    });
+  });
+
   // Copy buttons
   document.querySelectorAll('.copy-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {

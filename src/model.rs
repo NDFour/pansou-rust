@@ -119,6 +119,15 @@ pub struct CheckResponse {
     pub results: Vec<CheckResult>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MetricRequest {
+    pub metric_type: String,
+    pub metric_value: i32,
+    pub keyword: String,
+    pub title: String,
+    pub url: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
