@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}{{ keyword }} - 网盘资源搜索 - 盘盘侠{% endblock title %}
+
+{% block description %}{{ keyword }} 网盘资源搜索结果，包含百度网盘、阿里云盘、夸克网盘等多种云盘链接和提取码。{% endblock description %}
+
+{% block og_title %}{{ keyword }} - 网盘资源搜索 - 盘盘侠{% endblock og_title %}
+{% block og_description %}{{ keyword }} 网盘资源搜索结果，包含多种云盘链接和提取码。{% endblock og_description %}
+
+{% block twitter_title %}{{ keyword }} - 网盘资源搜索 - 盘盘侠{% endblock twitter_title %}
+{% block twitter_description %}{{ keyword }} 网盘资源搜索结果。{% endblock twitter_description %}
+
+{% block canonical %}{{ domain }}/search?q={{ keyword | urlencode }}{% endblock canonical %}
+
+{% block structured_data %}
+{
+  "@context": "https://schema.org",
+  "@type": "SearchResultsPage",
+  "name": "{{ keyword }} - 盘盘侠搜索",
+  "description": "{{ keyword }} 网盘资源搜索结果",
+  "url": "{{ domain }}/search?q={{ keyword | urlencode }}"
+}
+{% endblock structured_data %}
+
+{% block content %}
+
+<section class="section-light">
+  <div class="hero">
+    <h1 class="hero-heading">{{ keyword }}</h1>
+    <p class="hero-subtitle">搜索 TG 频道和各大云盘，快速获取网盘链接、提取码与资源信息</p>
+
+    <div class="hero-search">
+      <div class="search-bar">
+        <input
+          type="text"
+          id="search-input"
+          class="search-bar-input"
+          placeholder="输入关键词搜索资源..."
+          value="{{ keyword }}"
+          autocomplete="off"
+        >
+        <button class="search-bar-btn" id="search-btn">
+          <span class="btn-text">搜索</span>
+          <span class="btn-spinner"><span class="btn-spinner-icon"></span></span>
+        </button>
+      </div>
+
+      <div class="filter-bar" id="filter-bar">
+        <div class="filter-group">
+          <a href="/search?q={{ keyword | urlencode }}&amp;src=all" class="filter-chip {% if source_type == "all" %}active{% endif %}">全部（默认）</a>
+          <a href="/search?q={{ keyword | urlencode }}&amp;src=tg" class="filter-chip {% if source_type == "tg" %}active{% endif %}">TG频道</a>
+          <a href="/search?q={{ keyword | urlencode }}&amp;src=plugin" class="filter-chip {% if source_type == "plugin" %}active{% endif %}">网盘</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-ivory section-sm">
+  <div class="container">
+
+    <div id="results-container">
+      {% if results | length == 0 %}
+      <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <h3>未找到相关资源</h3>
+        <p>请尝试其他关键词</p>
+      </div>
+      {% else %}
+      <div class="results-list">
+        {% for result in results %}
+        <article class="result-card">
+          <h2 class="result-title">{{ result.title }}</h2>
+          <div class="result-meta">
+            <span class="result-channel">{{ result.channel }}</span>
+            <span class="result-time">{{ result.datetime }}</span>
+          </div>
+          {% if result.content %}
+          <p class="result-content">{{ result.content | truncate(length=200) }}</p>
+          {% endif %}
+          <div class="result-links">
+            {% for link in result.links %}
+            <a href="{{ link.url }}" rel="nofollow" class="result-link" data-disk-type="{{ link.disk_type }}">
+              <span class="disk-type-badge disk-type-{{ link.disk_type }}">{{ link.disk_type }}</span>
+              {% if link.password %}<span class="link-pwd">提取码: {{ link.password }}</span>{% endif %}
+            </a>
+            {% endfor %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      {% if total > 20 %}
+      <div class="pagination">
+        {% if page > 1 %}
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;page={{ page - 1 }}" class="page-link">上一页</a>
+        {% endif %}
+        <span class="page-info">第 {{ page }} 页，共 {{ total }} 条结果</span>
+        {% if page * 20 < total %}
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;page={{ page + 1 }}" class="page-link">下一页</a>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    {% if related_searches | length > 0 %}
+    <div class="related-searches" style="margin-top:2rem;padding:1rem 0;border-top:1px solid var(--color-border-warm);">
+      <h3 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.5rem;">相关搜索</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+        {% for term in related_searches %}
+        <a href="/search?q={{ term | urlencode }}" style="color:var(--color-brand);text-decoration:none;font-size:0.9rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ term }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock content %}
