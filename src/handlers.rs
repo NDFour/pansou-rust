@@ -72,7 +72,10 @@ pub async fn check_handler(
     (StatusCode::OK, Json(json!(response)))
 }
 
-pub async fn metric_handler(Json(req): Json<MetricRequest>) -> impl IntoResponse {
+pub async fn metric_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MetricRequest>,
+) -> impl IntoResponse {
     match req.metric_type.as_str() {
         "click" => {
             if req.keyword.trim().is_empty() || req.title.trim().is_empty() || req.url.trim().is_empty() || req.channel.trim().is_empty() {
@@ -83,6 +86,18 @@ pub async fn metric_handler(Json(req): Json<MetricRequest>) -> impl IntoResponse
                 return (StatusCode::BAD_REQUEST, Json(json!(err)));
             }
             log_metric(&req);
+
+            // 🆕 资源自动收录：从 click 事件提取资源信息
+            let disk_type = classify_disk_type_from_url(&req.url);
+            if disk_type != "others" {
+                state.resource_cache.insert(
+                    &req.title,
+                    &req.url,
+                    &disk_type,
+                    &req.channel,
+                    "",
+                );
+            }
         }
         _ => {
             warn!("无法识别的 metric_type: {}", req.metric_type);
@@ -93,6 +108,20 @@ pub async fn metric_handler(Json(req): Json<MetricRequest>) -> impl IntoResponse
 
 fn log_metric(req: &MetricRequest) {
     info!("log_metric_info: {:?}", serde_json::to_string(req).unwrap());
+}
+
+fn classify_disk_type_from_url(url: &str) -> String {
+    let lower = url.to_lowercase();
+    if lower.contains("pan.baidu.com") { return "baidu".into(); }
+    if lower.contains("pan.quark.cn") { return "quark".into(); }
+    if lower.contains("alipan.com") || lower.contains("aliyundrive.com") { return "aliyun".into(); }
+    if lower.contains("cloud.189.cn") { return "tianyi".into(); }
+    if lower.contains("drive.uc.cn") { return "uc".into(); }
+    if lower.contains("yun.139.com") || lower.contains("caiyun.139.com") { return "mobile".into(); }
+    if lower.contains("115.com") || lower.contains("115cdn.com") || lower.contains("anxia.com") { return "115".into(); }
+    if lower.contains("pan.xunlei.com") { return "xunlei".into(); }
+    if lower.contains("123pan.com") || lower.contains("123pan.cn") || lower.contains("123684.com") { return "123".into(); }
+    "others".into()
 }
 
 fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -> SearchRequest {
