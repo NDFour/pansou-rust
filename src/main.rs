@@ -97,6 +97,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/check/links", post(handlers::check_handler))
         .route("/api/stats/metric", post(handlers::metric_handler))
         .route("/api/health", get(handlers::health_handler))
+        .route("/robots.txt", get(handlers::robots_handler))
         .fallback(serve_embedded);
 
     let app = api_router

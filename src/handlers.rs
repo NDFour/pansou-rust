@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -149,6 +149,24 @@ fn normalize_search_request(req: &mut SearchRequest) {
         "plugin" => req.channels.clear(),
         _ => {}
     }
+}
+
+pub async fn robots_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let domain = if state.config.domain.is_empty() {
+        ""
+    } else {
+        &state.config.domain
+    };
+    let body = format!(
+        "User-agent: *\n\
+         Allow: /\n\
+         Allow: /search\n\
+         Allow: /resource/\n\
+         Disallow: /api/\n\
+         Sitemap: {}/sitemap.xml\n",
+        domain
+    );
+    (StatusCode::OK, [(header::CONTENT_TYPE, "text/plain; charset=utf-8")], body)
 }
 
 #[cfg(test)]
