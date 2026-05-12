@@ -4,6 +4,7 @@ mod model;
 mod plugin;
 mod post_search;
 mod assets;
+mod resource_cache;
 mod service;
 mod seo;
 
@@ -17,6 +18,7 @@ use axum::{
 };
 use assets::Assets;
 use config::AppConfig;
+use crate::resource_cache::ResourceCache;
 use service::{CheckService, SearchService};
 use tower_http::{
     compression::CompressionLayer,
@@ -34,6 +36,7 @@ pub struct AppState {
     search_service: SearchService,
     check_service: CheckService,
     templates: Arc<tera::Tera>,
+    resource_cache: ResourceCache,
 }
 
 async fn serve_embedded(uri: Uri) -> impl IntoResponse {
@@ -91,11 +94,16 @@ async fn main() -> anyhow::Result<()> {
             .expect("无法加载 HTML 模板")
     );
 
+    let persist_path = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("resource_cache.json")));
+
     let state = Arc::new(AppState {
         config: config.clone(),
         search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size, &config.post_search_endpoint),
         check_service: CheckService::new(),
         templates,
+        resource_cache: ResourceCache::new(persist_path),
     });
 
     let api_router = Router::new()
