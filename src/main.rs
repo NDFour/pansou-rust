@@ -5,6 +5,7 @@ mod plugin;
 mod post_search;
 mod assets;
 mod service;
+mod seo;
 
 use std::{sync::Arc, time::Duration};
 
