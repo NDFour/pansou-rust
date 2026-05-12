@@ -6,11 +6,12 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use serde::Serialize;
 use serde_json::{json, Value};
 use tracing::{info, warn};
 
 use crate::{
-    model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest, SearchResult},
+    model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest},
     resource_cache::ResourceInfo,
     seo,
     AppState,
@@ -284,18 +285,106 @@ pub async fn search_page_handler(
     // 执行搜索
     let search_response = state.search_service.search(&req).await;
 
-    // 截取当前页结果（每页 20 条）
+    // 提取所有链接，去重后按网盘类型分组
+    let disk_type_filter = q.get("disk_type").cloned().unwrap_or_else(|| "__all__".to_string());
+    let mut seen = std::collections::HashSet::new();
+    let mut all_links: Vec<LinkItem> = Vec::new();
+
+    for result in &search_response.results {
+        for link in &result.links {
+            if seen.insert(link.url.clone()) {
+                all_links.push(LinkItem {
+                    url: link.url.clone(),
+                    password: link.password.clone(),
+                    title: result.title.clone(),
+                    source: result.channel.clone(),
+                    datetime: format_datetime(result.datetime),
+                    disk_type: link.disk_type.clone(),
+                });
+            }
+        }
+    }
+
+    // 按 disk_type 分组
+    let mut groups: HashMap<String, Vec<&LinkItem>> = HashMap::new();
+    for item in &all_links {
+        groups.entry(item.disk_type.clone()).or_default().push(item);
+    }
+
+    // 计算 type_groups（固定排序：常用网盘在前）
+    let type_order = ["baidu", "quark", "aliyun", "tianyi", "xunlei", "115", "uc", "123", "mobile", "magnet", "ed2k"];
+    let mut type_groups: Vec<TypeGroup> = Vec::new();
+    for dt in &type_order {
+        if let Some(links) = groups.get(*dt) {
+            type_groups.push(TypeGroup {
+                disk_type: dt.to_string(),
+                label: type_friendly(dt),
+                count: links.len(),
+            });
+        }
+    }
+    // 其余类型放最后
+    for (dt, links) in &groups {
+        if !type_order.contains(&dt.as_str()) {
+            type_groups.push(TypeGroup {
+                disk_type: dt.clone(),
+                label: type_friendly(dt),
+                count: links.len(),
+            });
+        }
+    }
+
+    let total_links = all_links.len();
+
+    // 按 active_type 过滤 + 分页
     let page_size = 20;
+    let filtered: Vec<&LinkItem> = if disk_type_filter == "__all__" {
+        all_links.iter().collect()
+    } else {
+        all_links.iter().filter(|l| l.disk_type == disk_type_filter).collect()
+    };
+    let total_filtered = filtered.len();
     let start = (page.saturating_sub(1)) * page_size;
-    let results: Vec<&SearchResult> = search_response.results.iter().skip(start).take(page_size).collect();
+    let page_items: Vec<&LinkItem> = filtered.into_iter().skip(start).take(page_size).collect();
+
+    // 在分页结果内按类型分组
+    let mut page_groups: Vec<TypeGroupWithLinks> = Vec::new();
+    if disk_type_filter == "__all__" {
+        let mut grouped: HashMap<String, Vec<&LinkItem>> = HashMap::new();
+        for item in &page_items {
+            grouped.entry(item.disk_type.clone()).or_default().push(*item);
+        }
+        for dt in &type_order {
+            if let Some(links) = grouped.remove(*dt) {
+                let owned: Vec<LinkItem> = links.into_iter().map(|l| l.clone()).collect();
+                page_groups.push(TypeGroupWithLinks { label: type_friendly(dt), disk_type: dt.to_string(), links: owned });
+            }
+        }
+        for (dt, links) in grouped {
+            let owned: Vec<LinkItem> = links.into_iter().map(|l| l.clone()).collect();
+            page_groups.push(TypeGroupWithLinks { label: type_friendly(&dt), disk_type: dt, links: owned });
+        }
+    } else {
+        let owned: Vec<LinkItem> = page_items.iter().map(|l| (*l).clone()).collect();
+        if !owned.is_empty() {
+            page_groups.push(TypeGroupWithLinks {
+                label: type_friendly(&disk_type_filter),
+                disk_type: disk_type_filter.clone(),
+                links: owned,
+            });
+        }
+    }
 
     // 构建 Tera 上下文
     let mut ctx = tera::Context::new();
     ctx.insert("keyword", &keyword);
     ctx.insert("source_type", &source_type);
+    ctx.insert("disk_type_filter", &disk_type_filter);
     ctx.insert("page", &page);
-    ctx.insert("total", &search_response.total);
-    ctx.insert("results", &results);
+    ctx.insert("total_links", &total_links);
+    ctx.insert("total_filtered", &total_filtered);
+    ctx.insert("type_groups", &type_groups);
+    ctx.insert("page_groups", &page_groups);
     ctx.insert("domain", &format_domain(&state.config.domain));
     ctx.insert("related_searches", &seo::related_searches(&keyword));
 
@@ -314,6 +403,51 @@ pub async fn search_page_handler(
             (StatusCode::INTERNAL_SERVER_ERROR, "500 Internal Server Error").into_response()
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LinkItem {
+    url: String,
+    password: String,
+    title: String,
+    source: String,
+    datetime: String,
+    disk_type: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TypeGroup {
+    disk_type: String,
+    label: String,
+    count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TypeGroupWithLinks {
+    disk_type: String,
+    label: String,
+    links: Vec<LinkItem>,
+}
+
+fn type_friendly(dt: &str) -> String {
+    match dt {
+        "baidu" => "百度网盘".into(),
+        "quark" => "夸克网盘".into(),
+        "aliyun" => "阿里云盘".into(),
+        "tianyi" => "天翼云盘".into(),
+        "xunlei" => "迅雷云盘".into(),
+        "115" => "115网盘".into(),
+        "uc" => "UC网盘".into(),
+        "123" => "123云盘".into(),
+        "mobile" => "移动云盘".into(),
+        "magnet" => "磁力链接".into(),
+        "ed2k" => "电驴链接".into(),
+        _ => dt.to_string(),
+    }
+}
+
+fn format_datetime(dt: chrono::DateTime<chrono::Utc>) -> String {
+    dt.format("%Y-%m-%d").to_string()
 }
 
 fn format_domain(domain: &str) -> String {

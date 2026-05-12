@@ -60,47 +60,60 @@
   <div class="container">
 
     <div id="results-container">
-      {% if results | length == 0 %}
+      {% if total_links == 0 %}
       <div class="empty-state">
         <div class="empty-state-icon">🔍</div>
         <h3>未找到相关资源</h3>
         <p>请尝试其他关键词</p>
       </div>
       {% else %}
-      <div class="results-list">
-        {% for result in results %}
-        <article class="result-card">
-          <h2 class="result-title">{{ result.title }}</h2>
-          <div class="result-meta">
-            <span class="result-channel">{{ result.channel }}</span>
-            <span class="result-time">{{ result.datetime }}</span>
-          </div>
-          {% if result.content %}
-          <p class="result-content">{{ result.content | truncate(length=200) }}</p>
-          {% endif %}
-          <div class="result-links">
-            {% for link in result.links %}
-            <a href="{{ link.url }}" rel="nofollow" class="result-link" data-disk-type="{{ link.disk_type }}">
-              <span class="disk-type-badge disk-type-{{ link.disk_type }}">{{ link.disk_type }}</span>
-              {% if link.password %}<span class="link-pwd">提取码: {{ link.password }}</span>{% endif %}
-            </a>
-            {% endfor %}
-          </div>
-        </article>
+
+      <!-- Type Tabs -->
+      <div class="type-tabs">
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}" class="type-tab {% if disk_type_filter == "__all__" %}active{% endif %}">全部<span class="type-tab-count">{{ total_links }}</span></a>
+        {% for tg in type_groups %}
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ tg.disk_type }}" class="type-tab {% if disk_type_filter == tg.disk_type %}active{% endif %}">{{ tg.label }}<span class="type-tab-count">{{ tg.count }}</span></a>
         {% endfor %}
       </div>
 
-      {% if total > 20 %}
+      <!-- Grouped Links -->
+      {% for pg in page_groups %}
+      <div class="merged-group">
+        <div class="merged-group-header">{{ pg.label }}</div>
+        {% for link in pg.links %}
+        <div class="merged-card">
+          <div class="result-card-header">
+            <div>
+              <div class="result-title" title="{{ link.url }}">{{ link.title }}</div>
+              <a class="link-url mb-sm" href="{{ link.url }}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;">{{ link.url }}</a>
+              {% if link.password %}
+              <div class="link-password">提取码: {{ link.password }}</div>
+              {% endif %}
+            </div>
+            <div class="flex flex-col items-center gap-xs">
+              <span class="tag">{{ pg.label }}</span>
+              <span class="result-channel">{{ link.source }}</span>
+              <span class="caption text-stone">{{ link.datetime }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <!-- Pagination -->
+      {% if total_filtered > 20 %}
       <div class="pagination">
         {% if page > 1 %}
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;page={{ page - 1 }}" class="page-link">上一页</a>
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page - 1 }}" class="page-link">← 上一页</a>
         {% endif %}
-        <span class="page-info">第 {{ page }} 页，共 {{ total }} 条结果</span>
-        {% if page * 20 < total %}
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;page={{ page + 1 }}" class="page-link">下一页</a>
+        <span class="pagination-info">第 {{ page }} 页，共 {{ total_filtered }} 条</span>
+        {% if page * 20 < total_filtered %}
+        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page + 1 }}" class="page-link">下一页 →</a>
         {% endif %}
       </div>
       {% endif %}
+
       {% endif %}
     </div>
 

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tera::{Context, Tera};
 
 pub fn init_templates(templates_dir: &str) -> anyhow::Result<Tera> {
