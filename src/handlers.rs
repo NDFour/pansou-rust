@@ -169,6 +169,26 @@ pub async fn robots_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
     (StatusCode::OK, [(header::CONTENT_TYPE, "text/plain; charset=utf-8")], body)
 }
 
+pub async fn sitemap_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let domain = &state.config.domain;
+    let mut xml = String::from(
+        r#"<?xml version="1.0" encoding="UTF-8"?>"#,
+    );
+    xml.push_str(r#"<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">"#);
+
+    // 首页
+    xml.push_str(&format!(
+        "<url><loc>{}/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>",
+        domain
+    ));
+
+    // TODO: 热门搜索页和资源页将在后续阶段添加
+
+    xml.push_str("</urlset>");
+
+    (StatusCode::OK, [(header::CONTENT_TYPE, "application/xml; charset=utf-8")], xml)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
