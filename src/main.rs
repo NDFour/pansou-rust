@@ -115,6 +115,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/robots.txt", get(handlers::robots_handler))
         .route("/sitemap.xml", get(handlers::sitemap_handler))
         .route("/search", get(handlers::search_page_handler))
+        .route("/resource/{id}", get(handlers::resource_page_handler))
         .fallback(serve_embedded);
 
     let app = api_router

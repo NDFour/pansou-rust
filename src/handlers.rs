@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
     Json,
@@ -11,6 +11,7 @@ use tracing::{info, warn};
 
 use crate::{
     model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest, SearchResult},
+    resource_cache::ResourceInfo,
     seo,
     AppState,
 };
@@ -310,6 +311,49 @@ fn format_domain(domain: &str) -> String {
         String::new()
     } else {
         domain.trim_end_matches('/').to_string()
+    }
+}
+
+pub async fn resource_page_handler(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    match state.resource_cache.get(&id) {
+        Some(resource) => {
+            let mut ctx = tera::Context::new();
+            ctx.insert("resource", &resource);
+            ctx.insert("domain", &format_domain(&state.config.domain));
+
+            // 查找同一频道的相关资源
+            let channel = resource.channel.clone();
+            let current_id = resource.id.clone();
+            let related: Vec<ResourceInfo> = state
+                .resource_cache
+                .all_ids()
+                .iter()
+                .filter_map(|rid| state.resource_cache.get(rid))
+                .filter(|r| r.channel == channel && r.id != current_id)
+                .take(5)
+                .collect();
+            ctx.insert("related_resources", &related);
+
+            match seo::render_template(&state.templates, "resource.html", ctx) {
+                Ok(html) => (
+                    StatusCode::OK,
+                    [
+                        (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                        (header::CACHE_CONTROL, "public, max-age=3600"),
+                    ],
+                    html,
+                )
+                    .into_response(),
+                Err(e) => {
+                    tracing::error!("模板渲染失败: {}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "500 Internal Server Error").into_response()
+                }
+            }
+        }
+        None => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
     }
 }
 

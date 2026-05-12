@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ resource.title }} - 网盘资源 - 盘盘侠{% endblock title %}
+
+{% block description %}{{ resource.title }}，网盘类型：{{ resource.disk_type }}，来源频道：{{ resource.channel }}。快速获取网盘链接和资源信息。{% endblock description %}
+
+{% block og_title %}{{ resource.title }} - 网盘资源 - 盘盘侠{% endblock og_title %}
+{% block og_description %}{{ resource.title }}，网盘类型：{{ resource.disk_type }}。{% endblock og_description %}
+
+{% block twitter_title %}{{ resource.title }} - 网盘资源{% endblock twitter_title %}
+{% block twitter_description %}{{ resource.title }}，网盘类型：{{ resource.disk_type }}。{% endblock twitter_description %}
+
+{% block canonical %}{{ domain }}/resource/{{ resource.id }}{% endblock canonical %}
+
+{% block structured_data %}
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "{{ resource.title }}",
+  "description": "{{ resource.title }} - 网盘资源，类型：{{ resource.disk_type }}",
+  "url": "{{ domain }}/resource/{{ resource.id }}",
+  "dateCreated": "{{ resource.created_at }}"
+}
+{% endblock structured_data %}
+
+{% block content %}
+
+<section class="section-light">
+  <div class="container" style="max-width:720px;margin:0 auto;padding:2rem 1rem;">
+    <nav style="margin-bottom:1rem;">
+      <a href="/" style="color:var(--color-stone);text-decoration:none;font-size:0.9rem;">← 返回首页</a>
+    </nav>
+
+    <article>
+      <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">{{ resource.title }}</h1>
+
+      <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.5rem;">
+        <span class="disk-type-badge disk-type-{{ resource.disk_type }}" style="padding:0.25rem 0.75rem;border-radius:var(--radius-sm);font-size:0.85rem;background:var(--color-brand);color:#fff;">{{ resource.disk_type }}</span>
+        <span style="color:var(--color-stone);font-size:0.85rem;">来源：{{ resource.channel }}</span>
+        <span style="color:var(--color-stone);font-size:0.85rem;">收录时间：{{ resource.created_at }}</span>
+      </div>
+
+      <div style="background:var(--color-ivory);border:1px solid var(--color-border-warm);border-radius:var(--radius-md);padding:1.5rem;margin-bottom:1.5rem;">
+        <a href="{{ resource.url }}" rel="nofollow" target="_blank" style="color:var(--color-brand);font-size:1.1rem;word-break:break-all;">前往网盘 →</a>
+        {% if resource.password %}
+        <p style="margin-top:0.75rem;color:var(--color-charcoal);">提取码：<strong>{{ resource.password }}</strong></p>
+        {% endif %}
+      </div>
+    </article>
+
+    {% if related_resources | length > 0 %}
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border-warm);">
+      <h3 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.75rem;">来自同一频道</h3>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        {% for r in related_resources %}
+        <a href="/resource/{{ r.id }}" style="color:var(--color-brand);text-decoration:none;padding:0.5rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ r.title }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock content %}
