@@ -3,7 +3,10 @@
     "allow": [
       "Bash(cargo check *)",
       "Bash(cargo build *)",
-      "Bash(cargo test *)"
+      "Bash(cargo test *)",
+      "Bash(rtk ls *)",
+      "Bash(rtk git *)",
+      "Bash(rtk git commit -m ' *)"
     ]
   }
 }
