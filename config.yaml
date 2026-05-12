@@ -23,3 +23,8 @@ cache_ttl: 300
 # 后置插件：搜索完成后将结果推送到 Python 服务落库
 # 留空则不启用
 post_search_endpoint: ""
+
+# 网站域名，用于生成 sitemap 和 canonical URL（必填）
+domain: ""
+# 模板文件目录
+templates_dir: "templates"
