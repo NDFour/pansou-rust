@@ -33,6 +33,7 @@ pub struct AppState {
     config: AppConfig,
     search_service: SearchService,
     check_service: CheckService,
+    templates: Arc<tera::Tera>,
 }
 
 async fn serve_embedded(uri: Uri) -> impl IntoResponse {
@@ -85,10 +86,16 @@ async fn main() -> anyhow::Result<()> {
     info!("版本号 v{}", env!("CARGO_PKG_VERSION"));
     info!("配置: {:?}", config);
 
+    let templates = Arc::new(
+        seo::init_templates(&config.templates_dir)
+            .expect("无法加载 HTML 模板")
+    );
+
     let state = Arc::new(AppState {
         config: config.clone(),
         search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size, &config.post_search_endpoint),
         check_service: CheckService::new(),
+        templates,
     });
 
     let api_router = Router::new()
@@ -99,6 +106,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/health", get(handlers::health_handler))
         .route("/robots.txt", get(handlers::robots_handler))
         .route("/sitemap.xml", get(handlers::sitemap_handler))
+        .route("/search", get(handlers::search_page_handler))
         .fallback(serve_embedded);
 
     let app = api_router

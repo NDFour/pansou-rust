@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::{Query, State},
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -10,7 +10,8 @@ use serde_json::{json, Value};
 use tracing::{info, warn};
 
 use crate::{
-    model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest},
+    model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest, SearchResult},
+    seo,
     AppState,
 };
 
@@ -189,6 +190,85 @@ pub async fn sitemap_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
     (StatusCode::OK, [(header::CONTENT_TYPE, "application/xml; charset=utf-8")], xml)
 }
 
+pub async fn search_page_handler(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let keyword = q.get("q").or(q.get("kw")).cloned().unwrap_or_default();
+    let source_type = q.get("src").unwrap_or(&"all".to_string()).clone();
+    let page: usize = q.get("page").and_then(|v| v.parse().ok()).unwrap_or(1);
+
+    // 爬虫限流：通过 UA 检测，记录爬虫请求频率
+    let ua = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    if seo::is_crawler(ua) {
+        tracing::debug!("爬虫访问搜索页: keyword={}, ua={}", keyword, ua);
+    }
+
+    if keyword.trim().is_empty() {
+        // 返回首页（重定向）
+        return (
+            StatusCode::FOUND,
+            [(header::LOCATION, "/")],
+            axum::body::Body::empty(),
+        )
+            .into_response();
+    }
+
+    // 构建搜索请求
+    let req = SearchRequest {
+        keyword: keyword.clone(),
+        channels: state.config.channels.clone(),
+        source_type: source_type.clone(),
+        ..Default::default()
+    };
+
+    // 执行搜索
+    let search_response = state.search_service.search(&req).await;
+
+    // 截取当前页结果（每页 20 条）
+    let page_size = 20;
+    let start = (page.saturating_sub(1)) * page_size;
+    let results: Vec<&SearchResult> = search_response.results.iter().skip(start).take(page_size).collect();
+
+    // 构建 Tera 上下文
+    let mut ctx = tera::Context::new();
+    ctx.insert("keyword", &keyword);
+    ctx.insert("source_type", &source_type);
+    ctx.insert("page", &page);
+    ctx.insert("total", &search_response.total);
+    ctx.insert("results", &results);
+    ctx.insert("domain", &format_domain(&state.config.domain));
+    ctx.insert("related_searches", &seo::related_searches(&keyword));
+
+    match seo::render_template(&state.templates, "search.html", ctx) {
+        Ok(html) => (
+            StatusCode::OK,
+            [
+                (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                (header::CACHE_CONTROL, "public, max-age=300"),
+            ],
+            html,
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("模板渲染失败: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "500 Internal Server Error").into_response()
+        }
+    }
+}
+
+fn format_domain(domain: &str) -> String {
+    if domain.is_empty() {
+        String::new()
+    } else {
+        domain.trim_end_matches('/').to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,6 +346,7 @@ mod tests {
             config: AppConfig::default(),
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
+            templates: std::sync::Arc::new(tera::Tera::default()),
         });
 
         let mut q = HashMap::new();
@@ -283,6 +364,7 @@ mod tests {
             config: AppConfig::default(),
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
+            templates: std::sync::Arc::new(tera::Tera::default()),
         });
 
         let mut q = HashMap::new();
@@ -301,6 +383,7 @@ mod tests {
             config: AppConfig::default(),
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
+            templates: std::sync::Arc::new(tera::Tera::default()),
         });
 
         let mut q = HashMap::new();
