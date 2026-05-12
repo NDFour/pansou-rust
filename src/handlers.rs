@@ -183,11 +183,26 @@ pub async fn sitemap_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
         domain
     ));
 
-    // TODO: 热门搜索页和资源页将在后续阶段添加
+    // 搜索页（使用固定热门关键词作为初始种子）
+    let hot_keywords = [
+        "流浪地球", "庆余年", "凡人修仙传", "三体", "哪吒", "封神",
+        "鬼灭之刃", "海贼王", "火影忍者", "原神",
+    ];
+    for kw in &hot_keywords {
+        let encoded = urlencoding(kw);
+        xml.push_str(&format!(
+            "<url><loc>{}/search?q={}</loc><priority>0.8</priority><changefreq>daily</changefreq></url>",
+            domain, encoded
+        ));
+    }
 
     xml.push_str("</urlset>");
 
     (StatusCode::OK, [(header::CONTENT_TYPE, "application/xml; charset=utf-8")], xml)
+}
+
+fn urlencoding(input: &str) -> String {
+    url::form_urlencoded::byte_serialize(input.as_bytes()).collect()
 }
 
 pub async fn search_page_handler(
