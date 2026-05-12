@@ -49,7 +49,7 @@ max_cache_size: 1024
 post_search_endpoint: "http://localhost:9999/api/ingest"
 ```
 
-## Python 落库服务
+## Python 落库服务【可选】
 
 ```bash
 cd python-service
@@ -61,7 +61,7 @@ python main.py
 
 数据表结构：`search_results`（结果条目）
 
-## Metric 日志日报脚本
+## Metric 日志日报脚本【可选】
 
 日志中 `log_metric_info`（如 click 埋点）可通过脚本统计并推送飞书群消息：
 
