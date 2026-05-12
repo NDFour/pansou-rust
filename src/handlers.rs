@@ -226,6 +226,16 @@ pub async fn sitemap_handler(State(state): State<Arc<AppState>>) -> impl IntoRes
         ));
     }
 
+    // 资源详情页（最新 500 条）
+    let resource_ids = state.resource_cache.all_ids();
+    let max_resources = 500;
+    for id in resource_ids.iter().take(max_resources) {
+        xml.push_str(&format!(
+            "<url><loc>{}/resource/{}</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>",
+            domain, id
+        ));
+    }
+
     xml.push_str("</urlset>");
 
     (StatusCode::OK, [(header::CONTENT_TYPE, "application/xml; charset=utf-8")], xml)
