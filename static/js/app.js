@@ -315,9 +315,9 @@ function renderPagination(page, totalPages, hasPrev, hasNext) {
 
   return `
     <div class="pagination">
-      <button class="pagination-btn" data-action="prev" ${hasPrev ? '' : 'disabled'}>← 上一页</button>
+      <button type="button" class="pagination-btn" data-action="prev" ${hasPrev ? '' : 'disabled'}>← 上一页</button>
       <span class="pagination-info">第 ${page}/${totalPages} 页</span>
-      <button class="pagination-btn" data-action="next" ${hasNext ? '' : 'disabled'}>下一页 →</button>
+      <button type="button" class="pagination-btn" data-action="next" ${hasNext ? '' : 'disabled'}>下一页 →</button>
     </div>`;
 }
 
@@ -506,6 +506,12 @@ function bindPaginationEvents() {
       const action = btn.dataset.action;
       if (action === 'prev' && state.currentPage > 1) state.currentPage--;
       if (action === 'next') state.currentPage++;
+
+      // 滚动到搜索结果顶部
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
 
       const container = document.getElementById('results-container');
       if (container) {
