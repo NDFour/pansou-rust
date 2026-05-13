@@ -55,31 +55,31 @@ pub fn related_searches(keyword: &str) -> Vec<String> {
     if !keyword.contains(" 百度网盘") {
         other_keywords.insert(0, format!("{} 百度网盘", keyword));
     } else {
-        other_keywords.insert(0, keyword.replace(" 百度网盘", "")); 
+        other_keywords.insert(0, keyword.replace(" 百度网盘", ""));
     }
 
     if !keyword.contains(" 阿里云盘") {
         other_keywords.insert(0, format!("{} 阿里云盘", keyword));
     } else {
-        other_keywords.insert(0, keyword.replace(" 阿里云盘", "")); 
+        other_keywords.insert(0, keyword.replace(" 阿里云盘", ""));
     }
 
     if !keyword.contains(" 夸克网盘") {
         other_keywords.insert(0, format!("{} 夸克网盘", keyword));
     } else {
-        other_keywords.insert(0, keyword.replace(" 夸克网盘", "")); 
+        other_keywords.insert(0, keyword.replace(" 夸克网盘", ""));
     }
 
     if !keyword.contains(" 网盘下载") {
         other_keywords.insert(0, format!("{} 网盘下载", keyword));
     } else {
-        other_keywords.insert(0, keyword.replace(" 网盘下载", "")); 
+        other_keywords.insert(0, keyword.replace(" 网盘下载", ""));
     }
 
     if !keyword.contains(" 网盘") {
         other_keywords.insert(0, format!("{} 网盘", keyword));
     } else {
-        other_keywords.insert(0, keyword.replace(" 网盘", "")); 
+        other_keywords.insert(0, keyword.replace(" 网盘", ""));
     }
 
     info!("返回 related_searches: {:?}", other_keywords);
