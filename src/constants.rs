@@ -155,7 +155,6 @@ impl SourceType {
 /// 模板文件名
 pub mod templates {
     pub const SEARCH: &str = "search.html";
-    pub const RESOURCE: &str = "resource.html";
     pub const NOT_FOUND: &str = "404.html";
 }
 
@@ -180,7 +179,6 @@ pub mod cache {
     pub const IMG_FONT: &str = "public, max-age=2592000";
     pub const DEFAULT: &str = "public, max-age=86400";
     pub const SEARCH_PAGE: &str = "public, max-age=300";
-    pub const RESOURCE_PAGE: &str = "public, max-age=3600";
 }
 
 /// 文件扩展名 → 前端缓存策略分类

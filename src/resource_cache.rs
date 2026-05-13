@@ -64,18 +64,6 @@ impl ResourceCache {
         id
     }
 
-    pub fn get(&self, id: &str) -> Option<ResourceInfo> {
-        self.resources.get(id).map(|r| r.clone())
-    }
-
-    pub fn all_ids(&self) -> Vec<String> {
-        self.resources.iter().map(|r| r.key().clone()).collect()
-    }
-
-    pub fn len(&self) -> usize {
-        self.resources.len()
-    }
-
     pub fn hot_keywords(&self, n: usize) -> Vec<String> {
         let mut seen = std::collections::HashSet::new();
         let mut keywords = Vec::with_capacity(n);

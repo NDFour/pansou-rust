@@ -150,28 +150,6 @@
       {% endif %}
     </div>
 
-    {% if hot_keywords | length > 0 %}
-    <div class="hot-searches" style="margin-top:2rem;padding:1rem 0;border-top:1px solid var(--color-border-warm);text-align:center;">
-      <h2 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.5rem;">大家都在搜</h2>
-      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;">
-        {% for term in hot_keywords %}
-        <a href="/search?kw={{ term | urlencode }}" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ term }}</a>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if related_searches | length > 0 %}
-    <div class="related-searches" style="margin-top:1.5rem;padding:1rem 0;border-top:1px solid var(--color-border-warm);">
-      <h2 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.5rem;">相关搜索</h2>
-      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-        {% for term in related_searches %}
-        <a href="/search?kw={{ term | urlencode }}" style="color:var(--color-brand);text-decoration:none;font-size:0.9rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ term }}</a>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
   </div>
 </section>
 

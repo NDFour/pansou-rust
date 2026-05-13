@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Query, State},
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
 };
@@ -10,7 +10,6 @@ use serde::Serialize;
 use crate::{
     constants::{self, DiskType, SourceType},
     model::SearchRequest,
-    resource_cache::ResourceInfo,
     templates,
     AppState,
 };
@@ -203,59 +202,6 @@ pub async fn search_page_handler(
         Err(e) => {
             tracing::error!("模板渲染失败: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "500 Internal Server Error").into_response()
-        }
-    }
-}
-
-pub async fn resource_page_handler(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    match state.resource_cache.get(&id) {
-        Some(resource) => {
-            let mut ctx = tera::Context::new();
-            ctx.insert("resource", &resource);
-            ctx.insert("domain", &format_domain(&state.config.domain));
-
-            let channel = resource.channel.clone();
-            let current_id = resource.id.clone();
-            let related: Vec<ResourceInfo> = state
-                .resource_cache
-                .all_ids()
-                .iter()
-                .filter_map(|rid| state.resource_cache.get(rid))
-                .filter(|r| r.channel == channel && r.id != current_id)
-                .take(5)
-                .collect();
-            ctx.insert("related_resources", &related);
-
-            match templates::render_template(&state.templates, constants::templates::RESOURCE, ctx) {
-                Ok(html) => (
-                    StatusCode::OK,
-                    [
-                        (header::CONTENT_TYPE, "text/html; charset=utf-8"),
-                        (header::CACHE_CONTROL, constants::cache::RESOURCE_PAGE),
-                    ],
-                    html,
-                )
-                    .into_response(),
-                Err(e) => {
-                    tracing::error!("模板渲染失败: {}", e);
-                    (StatusCode::INTERNAL_SERVER_ERROR, "500 Internal Server Error").into_response()
-                }
-            }
-        }
-        None => {
-            let mut ctx = tera::Context::new();
-            ctx.insert("domain", &format_domain(&state.config.domain));
-            match templates::render_template(&state.templates, constants::templates::NOT_FOUND, ctx) {
-                Ok(html) => (
-                    StatusCode::NOT_FOUND,
-                    [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-                    html,
-                ).into_response(),
-                Err(_) => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
-            }
         }
     }
 }
