@@ -476,7 +476,6 @@ pub async fn search_page_handler(
     ctx.insert("type_groups", &type_groups);
     ctx.insert("page_groups", &page_groups);
     ctx.insert("domain", &format_domain(&state.config.domain));
-    ctx.insert("related_searches", &seo::related_searches(&keyword));
 
     match seo::render_template(&state.templates, "search.html", ctx) {
         Ok(html) => (

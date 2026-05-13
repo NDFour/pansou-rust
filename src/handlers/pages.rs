@@ -188,6 +188,7 @@ pub async fn search_page_handler(
     ctx.insert("page_groups", &page_groups);
     ctx.insert("domain", &format_domain(&state.config.domain));
     ctx.insert("related_searches", &templates::related_searches(&keyword));
+    ctx.insert("hot_keywords", &state.resource_cache.hot_keywords(8));
 
     match templates::render_template(&state.templates, constants::templates::SEARCH, ctx) {
         Ok(html) => (

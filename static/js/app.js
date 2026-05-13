@@ -206,6 +206,11 @@ async function performSearch() {
   state.currentKeyword = keyword;
   state.activeMergeType = '__all__';
   state.currentPage = 1;
+
+  // 搜索时隐藏热词
+  const hot = document.getElementById('hot-searches');
+  if (hot) hot.innerHTML = '';
+
   const filters = getActiveFilters();
 
   // Build search params
@@ -748,6 +753,28 @@ function bindResultEvents() {
 /* ============================================================
    Init
    ============================================================ */
+async function loadHotKeywords() {
+  const container = document.getElementById('hot-searches');
+  if (!container) return;
+
+  try {
+    const resp = await fetch('/api/hot-keywords');
+    const data = await resp.json();
+    const keywords = data.data || [];
+    if (keywords.length === 0) return;
+
+    container.innerHTML = `
+      <p style="color:var(--color-stone);font-size:0.85rem;margin-bottom:0.75rem;">大家都在搜</p>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;">
+        ${keywords.map(kw =>
+          `<a href="/search?kw=${encodeURIComponent(kw)}" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">${escapeHtml(kw)}</a>`
+        ).join('')}
+      </div>`;
+  } catch {
+    // 热词加载失败不阻塞主流程
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Init search if on search page
   if (document.getElementById('search-input')) {
@@ -760,4 +787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       bindResultEvents();
     }
   }
+
+  // Load hot keywords on homepage
+  await loadHotKeywords();
 });

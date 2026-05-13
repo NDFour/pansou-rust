@@ -76,6 +76,31 @@ impl ResourceCache {
         self.resources.len()
     }
 
+    pub fn hot_keywords(&self, n: usize) -> Vec<String> {
+        let mut seen = std::collections::HashSet::new();
+        let mut keywords = Vec::with_capacity(n);
+        for entry in self.resources.iter() {
+            let title = entry.value().title.trim();
+            if title.is_empty() {
+                continue;
+            }
+            // 取前 15 个字符作为热词，去重
+            let end = title.char_indices()
+                .take(15)
+                .last()
+                .map(|(i, c)| i + c.len_utf8())
+                .unwrap_or(title.len());
+            let kw = &title[..end.min(title.len())];
+            if seen.insert(kw.to_string()) {
+                keywords.push(kw.to_string());
+            }
+            if keywords.len() >= n {
+                break;
+            }
+        }
+        keywords
+    }
+
     fn schedule_persist(&self) {
         let cache = self.resources.clone();
         let path = self.persist_path.clone();

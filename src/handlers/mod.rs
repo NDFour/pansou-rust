@@ -12,7 +12,7 @@ use crate::{
     AppState,
 };
 
-pub use api::{check_handler, health_handler, metric_handler, search_get_handler, search_post_handler};
+pub use api::{check_handler, health_handler, hot_keywords_handler, metric_handler, search_get_handler, search_post_handler};
 pub use pages::{resource_page_handler, search_page_handler};
 pub use seo::{robots_handler, sitemap_handler};
 

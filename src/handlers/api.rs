@@ -74,6 +74,11 @@ pub async fn check_handler(
     (StatusCode::OK, Json(json!(response)))
 }
 
+pub async fn hot_keywords_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let keywords = state.resource_cache.hot_keywords(8);
+    (StatusCode::OK, Json(json!({"code": 0, "data": keywords})))
+}
+
 pub async fn metric_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<MetricRequest>,

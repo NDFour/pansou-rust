@@ -94,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/check/links", post(handlers::check_handler))
         .route("/api/stats/metric", post(handlers::metric_handler))
         .route("/api/health", get(handlers::health_handler))
+        .route("/api/hot-keywords", get(handlers::hot_keywords_handler))
         .route("/robots.txt", get(handlers::robots_handler))
         .route("/sitemap.xml", get(handlers::sitemap_handler))
         .route("/search", get(handlers::search_page_handler))
