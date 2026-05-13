@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}页面未找到 - 盘盘侠{% endblock title %}
+
+{% block description %}抱歉，您访问的页面不存在。试试搜索您想要的网盘资源。{% endblock description %}
+
+{% block og_title %}页面未找到 - 盘盘侠{% endblock og_title %}
+{% block og_description %}抱歉，您访问的页面不存在。{% endblock og_description %}
+
+{% block twitter_title %}页面未找到 - 盘盘侠{% endblock twitter_title %}
+{% block twitter_description %}抱歉，您访问的页面不存在。{% endblock twitter_description %}
+
+{% block canonical %}{{ domain }}/{% endblock canonical %}
+
+{% block structured_data %}
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "盘盘侠",
+  "url": "{{ domain }}"
+}
+{% endblock structured_data %}
+
+{% block content %}
+
+<section class="section-light">
+  <div class="container" style="max-width:720px;margin:0 auto;padding:3rem 1rem;text-align:center;">
+    <div style="font-size:4rem;margin-bottom:1rem;">🔍</div>
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:0.75rem;">页面未找到</h1>
+    <p style="color:var(--color-stone);margin-bottom:2rem;">抱歉，您访问的页面不存在。试试搜索您想要的资源吧。</p>
+
+    <div class="search-bar" style="max-width:480px;margin:0 auto 1.5rem;">
+      <input
+        type="text"
+        id="search-input"
+        class="search-bar-input"
+        placeholder="输入关键词搜索资源..."
+        autocomplete="off"
+        autofocus
+      >
+      <button class="search-bar-btn" id="search-btn">
+        <span class="btn-text">搜索</span>
+      </button>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <a href="/" style="color:var(--color-brand);text-decoration:none;font-size:0.95rem;">← 返回首页</a>
+    </div>
+  </div>
+</section>
+
+{% endblock content %}

@@ -15,11 +15,32 @@
 {% block structured_data %}
 {
   "@context": "https://schema.org",
-  "@type": "CreativeWork",
-  "name": "{{ resource.title }}",
-  "description": "{{ resource.title }} - 网盘资源，类型：{{ resource.disk_type }}",
-  "url": "{{ domain }}/resource/{{ resource.id }}",
-  "dateCreated": "{{ resource.created_at }}"
+  "@graph": [
+    {
+      "@type": "CreativeWork",
+      "name": "{{ resource.title }}",
+      "description": "{{ resource.title }} - 网盘资源，类型：{{ resource.disk_type }}",
+      "url": "{{ domain }}/resource/{{ resource.id }}",
+      "dateCreated": "{{ resource.created_at | timestamp_to_iso8601 }}"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首页",
+          "item": "{{ domain }}/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "{{ resource.title }}",
+          "item": "{{ domain }}/resource/{{ resource.id }}"
+        }
+      ]
+    }
+  ]
 }
 {% endblock structured_data %}
 
@@ -27,8 +48,9 @@
 
 <section class="section-light">
   <div class="container" style="max-width:720px;margin:0 auto;padding:2rem 1rem;">
-    <nav style="margin-bottom:1rem;">
-      <a href="/" style="color:var(--color-stone);text-decoration:none;font-size:0.9rem;">← 返回首页</a>
+    <nav class="breadcrumb" aria-label="面包屑导航" style="margin-bottom:1rem;">
+      <a href="/" style="color:var(--color-stone);text-decoration:none;font-size:0.9rem;">首页</a>
+      <span style="color:var(--color-stone);font-size:0.9rem;" aria-current="page"> &rsaquo; {{ resource.title }}</span>
     </nav>
 
     <article>
@@ -37,7 +59,7 @@
       <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.5rem;">
         <span class="disk-type-badge disk-type-{{ resource.disk_type }}" style="padding:0.25rem 0.75rem;border-radius:var(--radius-sm);font-size:0.85rem;background:var(--color-brand);color:#fff;">{{ resource.disk_type }}</span>
         <span style="color:var(--color-stone);font-size:0.85rem;">来源：{{ resource.channel }}</span>
-        <span style="color:var(--color-stone);font-size:0.85rem;">收录时间：{{ resource.created_at }}</span>
+        <span style="color:var(--color-stone);font-size:0.85rem;">收录时间：{{ resource.created_at | timestamp_to_date }}</span>
       </div>
 
       <div style="background:var(--color-ivory);border:1px solid var(--color-border-warm);border-radius:var(--radius-md);padding:1.5rem;margin-bottom:1.5rem;">
@@ -50,7 +72,7 @@
 
     {% if related_resources | length > 0 %}
     <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border-warm);">
-      <h3 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.75rem;">来自同一频道</h3>
+      <h2 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.75rem;">来自同一频道</h2>
       <div style="display:flex;flex-direction:column;gap:0.5rem;">
         {% for r in related_resources %}
         <a href="/resource/{{ r.id }}" style="color:var(--color-brand);text-decoration:none;padding:0.5rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ r.title }}</a>

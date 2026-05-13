@@ -10,19 +10,50 @@
 {% block twitter_title %}{{ keyword }} - 网盘资源搜索 - 盘盘侠{% endblock twitter_title %}
 {% block twitter_description %}{{ keyword }} 网盘资源搜索结果。{% endblock twitter_description %}
 
-{% block canonical %}{{ domain }}/search?q={{ keyword | urlencode }}{% endblock canonical %}
+{% block canonical %}{{ domain }}/search?kw={{ keyword | urlencode }}{% endblock canonical %}
+
+{% block head_extra %}
+  {% if page > 1 %}<link rel="prev" href="{{ domain }}/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page - 1 }}">{% endif %}
+  {% if page * 20 < total_filtered %}<link rel="next" href="{{ domain }}/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page + 1 }}">{% endif %}
+{% endblock head_extra %}
 
 {% block structured_data %}
 {
   "@context": "https://schema.org",
-  "@type": "SearchResultsPage",
-  "name": "{{ keyword }} - 盘盘侠搜索",
-  "description": "{{ keyword }} 网盘资源搜索结果",
-  "url": "{{ domain }}/search?q={{ keyword | urlencode }}"
+  "@graph": [
+    {
+      "@type": "SearchResultsPage",
+      "name": "{{ keyword }} - 盘盘侠搜索",
+      "description": "{{ keyword }} 网盘资源搜索结果",
+      "url": "{{ domain }}/search?kw={{ keyword | urlencode }}"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首页",
+          "item": "{{ domain }}/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "搜索：{{ keyword }}",
+          "item": "{{ domain }}/search?kw={{ keyword | urlencode }}"
+        }
+      ]
+    }
+  ]
 }
 {% endblock structured_data %}
 
 {% block content %}
+
+<nav class="breadcrumb" aria-label="面包屑导航" style="max-width:720px;margin:0 auto;padding:1rem 1rem 0;">
+  <a href="/">首页</a>
+  <span aria-current="page"> &rsaquo; 搜索：{{ keyword }}</span>
+</nav>
 
 <section class="section-light">
   <div class="hero">
@@ -30,26 +61,28 @@
     <p class="hero-subtitle">搜索 TG 频道和各大云盘，快速获取网盘链接、提取码与资源信息</p>
 
     <div class="hero-search">
-      <div class="search-bar">
+      <form class="search-bar" role="search" action="/search" method="get">
+        <label for="search-input" class="sr-only">搜索网盘资源</label>
         <input
-          type="text"
+          type="search"
           id="search-input"
+          name="q"
           class="search-bar-input"
           placeholder="输入关键词搜索资源..."
           value="{{ keyword }}"
           autocomplete="off"
         >
-        <button class="search-bar-btn" id="search-btn">
+        <button class="search-bar-btn" id="search-btn" type="submit">
           <span class="btn-text">搜索</span>
           <span class="btn-spinner"><span class="btn-spinner-icon"></span></span>
         </button>
-      </div>
+      </form>
 
       <div class="filter-bar" id="filter-bar">
         <div class="filter-group">
-          <a href="/search?q={{ keyword | urlencode }}&amp;src=all" class="filter-chip {% if source_type == "all" %}active{% endif %}">全部（默认）</a>
-          <a href="/search?q={{ keyword | urlencode }}&amp;src=tg" class="filter-chip {% if source_type == "tg" %}active{% endif %}">TG频道</a>
-          <a href="/search?q={{ keyword | urlencode }}&amp;src=plugin" class="filter-chip {% if source_type == "plugin" %}active{% endif %}">网盘</a>
+          <a href="/search?kw={{ keyword | urlencode }}&amp;src=all" class="filter-chip {% if source_type == "all" %}active{% endif %}">全部（默认）</a>
+          <a href="/search?kw={{ keyword | urlencode }}&amp;src=tg" class="filter-chip {% if source_type == "tg" %}active{% endif %}">TG频道</a>
+          <a href="/search?kw={{ keyword | urlencode }}&amp;src=plugin" class="filter-chip {% if source_type == "plugin" %}active{% endif %}">网盘</a>
         </div>
       </div>
     </div>
@@ -63,16 +96,16 @@
       {% if total_links == 0 %}
       <div class="empty-state">
         <div class="empty-state-icon">🔍</div>
-        <h3>未找到相关资源</h3>
+        <h2>未找到相关资源</h2>
         <p>请尝试其他关键词</p>
       </div>
       {% else %}
 
       <!-- Type Tabs -->
       <div class="type-tabs">
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}" class="type-tab {% if disk_type_filter == "__all__" %}active{% endif %}">全部<span class="type-tab-count">{{ total_links }}</span></a>
+        <a href="/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}" class="type-tab {% if disk_type_filter == "__all__" %}active{% endif %}">全部<span class="type-tab-count">{{ total_links }}</span></a>
         {% for tg in type_groups %}
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ tg.disk_type }}" class="type-tab {% if disk_type_filter == tg.disk_type %}active{% endif %}">{{ tg.label }}<span class="type-tab-count">{{ tg.count }}</span></a>
+        <a href="/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ tg.disk_type }}" class="type-tab {% if disk_type_filter == tg.disk_type %}active{% endif %}">{{ tg.label }}<span class="type-tab-count">{{ tg.count }}</span></a>
         {% endfor %}
       </div>
 
@@ -105,11 +138,11 @@
       {% if total_filtered > 20 %}
       <div class="pagination">
         {% if page > 1 %}
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page - 1 }}" class="page-link">← 上一页</a>
+        <a href="/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page - 1 }}" class="page-link">← 上一页</a>
         {% endif %}
         <span class="pagination-info">第 {{ page }} 页，共 {{ total_filtered }} 条</span>
         {% if page * 20 < total_filtered %}
-        <a href="/search?q={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page + 1 }}" class="page-link">下一页 →</a>
+        <a href="/search?kw={{ keyword | urlencode }}&amp;src={{ source_type }}&amp;disk_type={{ disk_type_filter }}&amp;page={{ page + 1 }}" class="page-link">下一页 →</a>
         {% endif %}
       </div>
       {% endif %}
@@ -119,10 +152,10 @@
 
     {% if related_searches | length > 0 %}
     <div class="related-searches" style="margin-top:2rem;padding:1rem 0;border-top:1px solid var(--color-border-warm);">
-      <h3 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.5rem;">相关搜索</h3>
+      <h2 style="font-size:0.9rem;color:var(--color-stone);margin-bottom:0.5rem;">相关搜索</h2>
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
         {% for term in related_searches %}
-        <a href="/search?q={{ term | urlencode }}" style="color:var(--color-brand);text-decoration:none;font-size:0.9rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ term }}</a>
+        <a href="/search?kw={{ term | urlencode }}" style="color:var(--color-brand);text-decoration:none;font-size:0.9rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">{{ term }}</a>
         {% endfor %}
       </div>
     </div>

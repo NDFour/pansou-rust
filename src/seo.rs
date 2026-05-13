@@ -1,10 +1,33 @@
-use tera::{Context, Tera};
+use std::collections::HashMap;
+
+use chrono::TimeZone;
+use tera::{Context, Tera, Value};
 use tracing::info;
 
 pub fn init_templates(templates_dir: &str) -> anyhow::Result<Tera> {
     let pattern = format!("{}/**/*.html", templates_dir);
-    let tera = Tera::new(&pattern)?;
+    let mut tera = Tera::new(&pattern)?;
+    tera.register_filter("timestamp_to_iso8601", timestamp_to_iso8601);
+    tera.register_filter("timestamp_to_date", timestamp_to_date);
     Ok(tera)
+}
+
+fn timestamp_to_iso8601(value: &Value, _args: &HashMap<String, Value>) -> Result<Value, tera::Error> {
+    if let Some(ts) = value.as_i64() {
+        if let Some(dt) = chrono::Utc.timestamp_opt(ts, 0).single() {
+            return Ok(Value::String(dt.format("%Y-%m-%dT%H:%M:%SZ").to_string()));
+        }
+    }
+    Ok(value.clone())
+}
+
+fn timestamp_to_date(value: &Value, _args: &HashMap<String, Value>) -> Result<Value, tera::Error> {
+    if let Some(ts) = value.as_i64() {
+        if let Some(dt) = chrono::Utc.timestamp_opt(ts, 0).single() {
+            return Ok(Value::String(dt.format("%Y-%m-%d %H:%M").to_string()));
+        }
+    }
+    Ok(value.clone())
 }
 
 pub fn render_template(tera: &Tera, template: &str, ctx: Context) -> anyhow::Result<String> {
@@ -25,7 +48,7 @@ pub fn is_crawler(user_agent: &str) -> bool {
 
 /// 从关键词生成相关搜索推荐
 pub fn related_searches(keyword: &str) -> Vec<String> {
-    if keyword.is_empty() || keyword.len() > 20 {
+    if keyword.is_empty() || keyword.chars().count() > 20 {
         return vec![];
     }
     let mut other_keywords = vec![];

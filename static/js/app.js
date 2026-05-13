@@ -486,7 +486,7 @@ function renderMergedCard(link, label, delayClass) {
           <span class="caption text-stone">${formatDate(link.datetime)}</span>
         </div>
       </div>
-      ${link.images?.length ? `<div class="flex gap-sm mt-sm">${link.images.map(img => `<img src="${escapeHtml(img)}" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:var(--radius-sm)" loading="lazy">`).join('')}</div>` : ''}
+      ${link.images?.length ? `<div class="flex gap-sm mt-sm">${link.images.map(img => `<img src="${escapeHtml(img)}" alt="${escapeHtml(link.note || link.url)}" style="width:60px;height:60px;object-fit:cover;border-radius:var(--radius-sm)" loading="lazy">`).join('')}</div>` : ''}
     </div>`;
 }
 

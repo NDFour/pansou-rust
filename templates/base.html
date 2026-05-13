@@ -14,12 +14,16 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="{% block og_title %}盘盘侠 — 云盘资源搜索{% endblock og_title %}">
   <meta property="og:description" content="{% block og_description %}聚合 TG 频道与各大云盘，快速获取网盘链接、提取码与资源信息。{% endblock og_description %}">
+  <meta property="og:image" content="{% block og_image %}{{ domain }}/static/og-image.png{% endblock og_image %}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="盘盘侠">
   <meta property="og:locale" content="zh_CN">
 
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{% block twitter_title %}盘盘侠 — 云盘资源搜索{% endblock twitter_title %}">
   <meta name="twitter:description" content="{% block twitter_description %}聚合 TG 频道与各大云盘，快速获取网盘链接、提取码与资源信息。{% endblock twitter_description %}">
+  <meta name="twitter:image" content="{% block twitter_image %}{{ domain }}/static/og-image.png{% endblock twitter_image %}">
 
   <link rel="canonical" href="{% block canonical %}/{% endblock canonical %}">
 
@@ -46,11 +50,13 @@
   </script>
 
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preload" as="style" href="/static/css/style.css?v=20260513">
+  <link rel="stylesheet" href="/static/css/style.css?v=20260513">
+  {% block head_extra %}{% endblock head_extra %}
 </head>
 <body>
 
-<nav class="nav">
+<nav class="nav" aria-label="主导航">
   <div class="nav-inner">
     <a href="/" class="nav-brand">
       <span class="nav-brand-icon">盘</span>
@@ -60,9 +66,11 @@
   </div>
 </nav>
 
+<main>
 {% block content %}{% endblock content %}
+</main>
 
-<footer class="footer">
+<footer class="footer" role="contentinfo">
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand-col">
@@ -85,9 +93,9 @@
       <div class="footer-links-col">
         <div class="footer-link-group">
           <h4 class="footer-heading">友情链接</h4>
-          <a href="https://www.chenjin5.com" target="_blank" rel="noopener noreferrer" class="footer-link">沉金书屋</a>
-          <a href="https://www.panshushu.com" target="_blank" rel="noopener noreferrer" class="footer-link">盘叔叔</a>
-          <a href="https://www.codelicence.cn" target="_blank" rel="noopener noreferrer" class="footer-link">云盘4K</a>
+          <a href="https://www.chenjin5.com" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">沉金书屋</a>
+          <a href="https://www.panshushu.com" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">盘叔叔</a>
+          <a href="https://www.codelicence.cn" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">云盘4K</a>
         </div>
       </div>
     </div>
@@ -97,6 +105,6 @@
   </div>
 </footer>
 
-<script src="/static/js/app.js"></script>
+<script src="/static/js/app.js?v=20260513"></script>
 </body>
 </html>

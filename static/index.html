@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PanPanXia 盘盘侠 — 云盘资源搜索</title>
+  <title>盘盘侠 — 云盘资源搜索</title>
 
   <!-- Primary Meta -->
   <meta name="description" content="PanPanXia 盘盘侠是开源云盘资源搜索引擎，聚合 TG 频道与第三方网盘搜索插件，快速获取百度网盘、阿里云盘、夸克网盘等资源链接、提取码与资源信息。">
@@ -14,15 +14,19 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="PanPanXia 盘盘侠 — 云盘资源搜索">
+  <meta property="og:title" content="盘盘侠 — 云盘资源搜索">
   <meta property="og:description" content="聚合 TG 频道与各大云盘，快速获取网盘链接、提取码与资源信息。开源、免费、高速。">
+  <meta property="og:image" content="https://panpanxia.com/static/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="PanPanXia 盘盘侠">
   <meta property="og:locale" content="zh_CN">
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="PanPanXia 盘盘侠 — 云盘资源搜索">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="盘盘侠 — 云盘资源搜索">
   <meta name="twitter:description" content="聚合 TG 频道与各大云盘，快速获取网盘链接、提取码与资源信息。开源、免费、高速。">
+  <meta name="twitter:image" content="https://panpanxia.com/static/og-image.png">
 
   <!-- Canonical -->
   <link rel="canonical" href="https://panpanxia.com/">
@@ -41,7 +45,7 @@
       "@type": "SearchAction",
       "target": {
         "@type": "EntryPoint",
-        "urlTemplate": "/?q={search_term_string}"
+        "urlTemplate": "https://panpanxia.com/search?kw={search_term_string}"
       },
       "query-input": "required name=search_term_string"
     }
@@ -51,12 +55,13 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preload" as="style" href="/static/css/style.css?v=20260513">
+  <link rel="stylesheet" href="/static/css/style.css?v=20260513">
 </head>
 <body>
 
   <!-- Navigation -->
-  <nav class="nav">
+  <nav class="nav" aria-label="主导航">
     <div class="nav-inner">
       <a href="/" class="nav-brand">
         <span class="nav-brand-icon">盘</span>
@@ -67,6 +72,7 @@
     </div>
   </nav>
 
+  <main>
   <!-- Hero Section -->
   <section class="section-light">
     <div class="hero">
@@ -75,9 +81,10 @@
 
       <!-- Search Bar -->
       <div class="hero-search">
-        <div class="search-bar">
+        <form class="search-bar" role="search" onsubmit="return false">
+          <label for="search-input" class="sr-only">搜索网盘资源</label>
           <input
-            type="text"
+            type="search"
             id="search-input"
             class="search-bar-input"
             placeholder="输入关键词搜索资源..."
@@ -88,7 +95,7 @@
             <span class="btn-text">搜索</span>
             <span class="btn-spinner"><span class="btn-spinner-icon"></span></span>
           </button>
-        </div>
+        </form>
 
         <!-- Filter Bar -->
         <div class="filter-bar" id="filter-bar">
@@ -113,22 +120,24 @@
       <div class="hot-searches" style="text-align:center;">
         <p style="color:var(--color-stone);font-size:0.85rem;margin-bottom:0.75rem;">大家都在搜</p>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;">
-          <a href="/search?q=流浪地球" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">流浪地球</a>
-          <a href="/search?q=庆余年" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">庆余年</a>
-          <a href="/search?q=凡人修仙传" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">凡人修仙传</a>
-          <a href="/search?q=从零开始的异世界生活" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">从零开始的异世界生活</a>
-          <a href="/search?q=哪吒" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">哪吒</a>
-          <a href="/search?q=三体" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">三体</a>
-          <a href="/search?q=鬼灭之刃" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">鬼灭之刃</a>
-          <a href="/search?q=周杰伦" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">周杰伦</a>
+          <a href="/流浪地球" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">流浪地球</a>
+          <a href="/search?kw=庆余年" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">庆余年</a>
+          <a href="/search?kw=凡人修仙传" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">凡人修仙传</a>
+          <a href="/search?kw=从零开始的异世界生活" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">从零开始的异世界生活</a>
+          <a href="/search?kw=哪吒" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">哪吒</a>
+          <a href="/search?kw=三体" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">三体</a>
+          <a href="/search?kw=鬼灭之刃" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">鬼灭之刃</a>
+          <a href="/search?kw=周杰伦" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">周杰伦</a>
         </div>
       </div>
 
     </div>
   </section>
 
+  </main>
+
   <!-- Footer -->
-  <footer class="footer">
+  <footer class="footer" role="contentinfo">
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand-col">
@@ -153,9 +162,9 @@
         <div class="footer-links-col">
           <div class="footer-link-group">
             <h4 class="footer-heading">友情链接</h4>
-            <a href="https://www.chenjin5.com" target="_blank" rel="noopener noreferrer" class="footer-link">沉金书屋</a>
-            <a href="https://www.panshushu.com" target="_blank" rel="noopener noreferrer" class="footer-link">盘叔叔</a>
-            <a href="https://www.codelicence.cn" target="_blank" rel="noopener noreferrer" class="footer-link">云盘4K</a>
+            <a href="https://www.chenjin5.com" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">沉金书屋</a>
+            <a href="https://www.panshushu.com" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">盘叔叔</a>
+            <a href="https://www.codelicence.cn" target="_blank" rel="nofollow noopener noreferrer" class="footer-link">云盘4K</a>
           </div>
         </div>
       </div>
@@ -166,6 +175,6 @@
     </div>
   </footer>
 
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=20260513"></script>
 </body>
 </html>
