@@ -7,7 +7,10 @@ use axum::{
 };
 use chrono::TimeZone;
 
-use crate::AppState;
+use crate::{
+    constants::HOT_KEYWORDS,
+    AppState,
+};
 
 use super::urlencoding;
 
@@ -50,11 +53,8 @@ pub async fn sitemap_handler(
             domain, today
         ));
 
-        let hot_keywords = [
-            "流浪地球", "庆余年", "凡人修仙传", "三体", "哪吒", "封神",
-            "鬼灭之刃", "海贼王", "火影忍者", "原神",
-        ];
-        for kw in &hot_keywords {
+        let hot_keywords = HOT_KEYWORDS;
+        for kw in hot_keywords {
             let encoded = urlencoding(kw);
             xml.push_str(&format!(
                 "<url><loc>{}/search?kw={}</loc><lastmod>{}</lastmod><priority>0.8</priority><changefreq>daily</changefreq></url>",
@@ -128,7 +128,7 @@ pub async fn sitemap_handler(
         "流浪地球", "庆余年", "凡人修仙传", "三体", "哪吒", "封神",
         "鬼灭之刃", "海贼王", "火影忍者", "原神",
     ];
-    for kw in &hot_keywords {
+    for kw in hot_keywords {
         let encoded = urlencoding(kw);
         xml.push_str(&format!(
             "<url><loc>{}/search?kw={}</loc><lastmod>{}</lastmod><priority>0.8</priority><changefreq>daily</changefreq></url>",

@@ -10,6 +10,7 @@ use serde_json::json;
 use tracing::{info, warn};
 
 use crate::{
+    constants::DiskType,
     model::{ApiResponse, CheckRequest, MetricRequest, SearchRequest},
     AppState,
 };
@@ -89,7 +90,7 @@ pub async fn metric_handler(
             log_metric(&req);
 
             let disk_type = classify_disk_type_from_url(&req.url);
-            if disk_type != "others" {
+            if DiskType::from_str(&disk_type) != DiskType::Others {
                 state.resource_cache.insert(
                     &req.title,
                     &req.url,

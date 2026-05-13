@@ -4,6 +4,9 @@ use axum::{
 };
 use rust_embed::RustEmbed;
 
+use crate::constants::cache;
+use crate::constants::cache_ext;
+
 #[derive(RustEmbed)]
 #[folder = "static/"]
 pub struct Assets;
@@ -19,10 +22,13 @@ pub async fn serve_embedded(uri: Uri) -> impl IntoResponse {
             let content_type = axum::http::HeaderValue::from_str(mime.as_ref())
                 .unwrap_or(axum::http::HeaderValue::from_static("application/octet-stream"));
 
-            let cache_control = match path.rsplit('.').next() {
-                Some("css") | Some("js") => "public, max-age=604800",
-                Some("svg") | Some("png") | Some("jpg") | Some("webp") | Some("ico") | Some("woff") | Some("woff2") => "public, max-age=2592000",
-                _ => "public, max-age=86400",
+            let ext = path.rsplit('.').next().unwrap_or("");
+            let cache_control = if cache_ext::LONG.contains(&ext) {
+                cache::CSS_JS
+            } else if cache_ext::VERY_LONG.contains(&ext) {
+                cache::IMG_FONT
+            } else {
+                cache::DEFAULT
             };
 
             (

@@ -3,6 +3,8 @@ use chrono::Utc;
 use reqwest::Client;
 use serde::Deserialize;
 
+use crate::constants::DiskType;
+
 use crate::model::{Link, SearchResult};
 
 use super::SearchPlugin;
@@ -92,19 +94,7 @@ impl SearchPlugin for PanshushuPlugin {
 }
 
 fn link_type(url: &str) -> String {
-    let lower = url.to_lowercase();
-    if lower.starts_with("magnet:") { return "magnet".into(); }
-    if lower.starts_with("ed2k://") { return "ed2k".into(); }
-    if lower.contains("pan.baidu.com") { return "baidu".into(); }
-    if lower.contains("pan.quark.cn") { return "quark".into(); }
-    if lower.contains("alipan.com") || lower.contains("aliyundrive.com") { return "aliyun".into(); }
-    if lower.contains("cloud.189.cn") { return "tianyi".into(); }
-    if lower.contains("drive.uc.cn") { return "uc".into(); }
-    if lower.contains("yun.139.com") || lower.contains("caiyun.139.com") { return "mobile".into(); }
-    if lower.contains("115.com") || lower.contains("115cdn.com") || lower.contains("anxia.com") { return "115".into(); }
-    if lower.contains("pan.xunlei.com") { return "xunlei".into(); }
-    if lower.contains("123pan.com") || lower.contains("123pan.cn") || lower.contains("123684.com") { return "123".into(); }
-    "others".into()
+    DiskType::from_url(url).as_str().to_string()
 }
 
 fn urlencoding(input: &str) -> String {

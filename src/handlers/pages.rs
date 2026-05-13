@@ -8,6 +8,7 @@ use axum::{
 use serde::Serialize;
 
 use crate::{
+    constants::{self, DiskType, SourceType},
     model::SearchRequest,
     resource_cache::ResourceInfo,
     templates,
@@ -41,20 +42,7 @@ struct TypeGroupWithLinks {
 }
 
 fn type_friendly(dt: &str) -> String {
-    match dt {
-        "baidu" => "百度网盘".into(),
-        "quark" => "夸克网盘".into(),
-        "aliyun" => "阿里云盘".into(),
-        "tianyi" => "天翼云盘".into(),
-        "xunlei" => "迅雷云盘".into(),
-        "115" => "115网盘".into(),
-        "uc" => "UC网盘".into(),
-        "123" => "123云盘".into(),
-        "mobile" => "移动云盘".into(),
-        "magnet" => "磁力链接".into(),
-        "ed2k" => "电驴链接".into(),
-        _ => dt.to_string(),
-    }
+    DiskType::from_str(dt).friendly_name().to_string()
 }
 
 fn format_datetime(dt: chrono::DateTime<chrono::Utc>) -> String {
@@ -76,7 +64,7 @@ pub async fn search_page_handler(
             .into_response();
     }
 
-    let source_type = q.get("src").unwrap_or(&"all".to_string()).clone();
+    let source_type = q.get("src").unwrap_or(&SourceType::All.as_str().to_string()).clone();
     let page: usize = q.get("page").and_then(|v| v.parse().ok()).unwrap_or(1);
 
     let ua = headers
@@ -129,19 +117,19 @@ pub async fn search_page_handler(
         groups.entry(item.disk_type.clone()).or_default().push(item);
     }
 
-    let type_order = ["baidu", "quark", "aliyun", "tianyi", "xunlei", "115", "uc", "123", "mobile", "magnet", "ed2k"];
+    let display_order: Vec<String> = DiskType::display_order().iter().map(|d| d.as_str().to_string()).collect();
     let mut type_groups: Vec<TypeGroup> = Vec::new();
-    for dt in &type_order {
-        if let Some(links) = groups.get(*dt) {
+    for dt in &display_order {
+        if let Some(links) = groups.get(dt.as_str()) {
             type_groups.push(TypeGroup {
-                disk_type: dt.to_string(),
+                disk_type: dt.clone(),
                 label: type_friendly(dt),
                 count: links.len(),
             });
         }
     }
     for (dt, links) in &groups {
-        if !type_order.contains(&dt.as_str()) {
+        if !display_order.contains(dt) {
             type_groups.push(TypeGroup {
                 disk_type: dt.clone(),
                 label: type_friendly(dt),
@@ -168,10 +156,10 @@ pub async fn search_page_handler(
         for item in &page_items {
             grouped.entry(item.disk_type.clone()).or_default().push(*item);
         }
-        for dt in &type_order {
-            if let Some(links) = grouped.remove(*dt) {
+        for dt in &display_order {
+            if let Some(links) = grouped.remove(dt.as_str()) {
                 let owned: Vec<LinkItem> = links.into_iter().map(|l| l.clone()).collect();
-                page_groups.push(TypeGroupWithLinks { label: type_friendly(dt), disk_type: dt.to_string(), links: owned });
+                page_groups.push(TypeGroupWithLinks { label: type_friendly(dt), disk_type: dt.clone(), links: owned });
             }
         }
         for (dt, links) in grouped {
@@ -201,12 +189,12 @@ pub async fn search_page_handler(
     ctx.insert("domain", &format_domain(&state.config.domain));
     ctx.insert("related_searches", &templates::related_searches(&keyword));
 
-    match templates::render_template(&state.templates, "search.html", ctx) {
+    match templates::render_template(&state.templates, constants::templates::SEARCH, ctx) {
         Ok(html) => (
             StatusCode::OK,
             [
                 (header::CONTENT_TYPE, "text/html; charset=utf-8"),
-                (header::CACHE_CONTROL, "public, max-age=300"),
+                (header::CACHE_CONTROL, constants::cache::SEARCH_PAGE),
             ],
             html,
         )
@@ -240,12 +228,12 @@ pub async fn resource_page_handler(
                 .collect();
             ctx.insert("related_resources", &related);
 
-            match templates::render_template(&state.templates, "resource.html", ctx) {
+            match templates::render_template(&state.templates, constants::templates::RESOURCE, ctx) {
                 Ok(html) => (
                     StatusCode::OK,
                     [
                         (header::CONTENT_TYPE, "text/html; charset=utf-8"),
-                        (header::CACHE_CONTROL, "public, max-age=3600"),
+                        (header::CACHE_CONTROL, constants::cache::RESOURCE_PAGE),
                     ],
                     html,
                 )
@@ -259,7 +247,7 @@ pub async fn resource_page_handler(
         None => {
             let mut ctx = tera::Context::new();
             ctx.insert("domain", &format_domain(&state.config.domain));
-            match templates::render_template(&state.templates, "404.html", ctx) {
+            match templates::render_template(&state.templates, constants::templates::NOT_FOUND, ctx) {
                 Ok(html) => (
                     StatusCode::NOT_FOUND,
                     [(header::CONTENT_TYPE, "text/html; charset=utf-8")],

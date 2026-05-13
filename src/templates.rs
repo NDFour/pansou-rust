@@ -4,6 +4,8 @@ use chrono::TimeZone;
 use tera::{Context, Tera, Value};
 use tracing::info;
 
+use crate::constants::CRAWLER_UA_FRAGMENTS;
+
 pub fn init_templates(templates_dir: &str) -> anyhow::Result<Tera> {
     let pattern = format!("{}/**/*.html", templates_dir);
     let mut tera = Tera::new(&pattern)?;
@@ -36,14 +38,7 @@ pub fn render_template(tera: &Tera, template: &str, ctx: Context) -> anyhow::Res
 
 pub fn is_crawler(user_agent: &str) -> bool {
     let ua_lower = user_agent.to_lowercase();
-    let crawlers = [
-        "googlebot", "bingbot", "baiduspider", "sogou", "360spider",
-        "yandexbot", "duckduckbot", "slurp", "facebookexternalhit",
-        "twitterbot", "rogerbot", "linkedinbot", "embedly", "quora",
-        "pinterest", "slack", "whatsapp", "telegrambot", "applebot",
-        "petalbot", "ahrefsbot", "semrushbot", "dotbot",
-    ];
-    crawlers.iter().any(|c| ua_lower.contains(c))
+    CRAWLER_UA_FRAGMENTS.iter().any(|c| ua_lower.contains(c))
 }
 
 /// 从关键词生成相关搜索推荐

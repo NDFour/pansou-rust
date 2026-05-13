@@ -11,6 +11,7 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use tracing::{info, warn};
 
+use crate::constants::{DiskType, SourceType};
 use crate::model::{SearchRequest, SearchResponse, SearchResult};
 
 use crate::plugin::PluginRegistry;
@@ -81,9 +82,9 @@ impl SearchService {
             }
         }
 
-        let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
-        let need_tg = source_type == "all" || source_type == "tg";
-        let need_plugin = source_type == "all" || source_type == "plugin";
+        let source_type = if req.source_type.is_empty() { SourceType::All.as_str() } else { req.source_type.as_str() };
+        let need_tg = source_type == SourceType::All.as_str() || source_type == SourceType::Tg.as_str();
+        let need_plugin = source_type == SourceType::All.as_str() || source_type == SourceType::Plugin.as_str();
 
         let (tg_results, native_plugin_results) = tokio::join!(
             async { if need_tg { self.search_tg(req).await } else { vec![] } },
@@ -240,7 +241,7 @@ fn extract_links(content: &str) -> Vec<crate::model::Link> {
             continue;
         }
         let disk_type = link_type(&raw);
-        if disk_type == "others" {
+        if DiskType::from_str(&disk_type) == DiskType::Others {
             continue;
         }
         links.push(crate::model::Link {
@@ -268,19 +269,7 @@ fn extract_pwd(content: &str) -> String {
 }
 
 fn link_type(url: &str) -> String {
-    let lower = url.to_lowercase();
-    if lower.starts_with("magnet:") { return "magnet".into(); }
-    if lower.starts_with("ed2k://") { return "ed2k".into(); }
-    if lower.contains("pan.baidu.com") { return "baidu".into(); }
-    if lower.contains("pan.quark.cn") { return "quark".into(); }
-    if lower.contains("alipan.com") || lower.contains("aliyundrive.com") { return "aliyun".into(); }
-    if lower.contains("cloud.189.cn") { return "tianyi".into(); }
-    if lower.contains("drive.uc.cn") { return "uc".into(); }
-    if lower.contains("yun.139.com") || lower.contains("caiyun.139.com") { return "mobile".into(); }
-    if lower.contains("115.com") || lower.contains("115cdn.com") || lower.contains("anxia.com") { return "115".into(); }
-    if lower.contains("pan.xunlei.com") { return "xunlei".into(); }
-    if lower.contains("123pan.com") || lower.contains("123pan.cn") || lower.contains("123684.com") { return "123".into(); }
-    "others".into()
+    DiskType::from_url(url).as_str().to_string()
 }
 
 /// 合并搜索结果
@@ -338,7 +327,7 @@ fn urlencoding(input: &str) -> String {
 }
 
 fn search_cache_key(req: &SearchRequest) -> String {
-    let source_type = if req.source_type.is_empty() { "all" } else { req.source_type.as_str() };
+    let source_type = if req.source_type.is_empty() { SourceType::All.as_str() } else { req.source_type.as_str() };
     format!(
         "kw={}|src={}",
         req.keyword, source_type

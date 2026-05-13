@@ -4,6 +4,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::constants::DiskType;
+
 use chrono::Utc;
 use reqwest::Client;
 use url::Url;
@@ -78,7 +80,7 @@ fn normalize_share_link(disk_type: &str, raw: &str, password: &str) -> String {
         return raw.to_string();
     };
     u.set_fragment(None);
-    if !password.is_empty() && (disk_type == "baidu" || disk_type == "quark" || disk_type == "uc") {
+    if !password.is_empty() && matches!(DiskType::from_str(disk_type), DiskType::Baidu | DiskType::Quark | DiskType::Uc) {
         let mut qp = u.query_pairs().into_owned().collect::<Vec<(String, String)>>();
         if !qp.iter().any(|(k, _)| k == "pwd") {
             qp.push(("pwd".into(), password.into()));
@@ -94,8 +96,9 @@ fn normalize_share_link(disk_type: &str, raw: &str, password: &str) -> String {
 }
 
 fn quick_check(item: &CheckItem, normalized: &str) -> CheckResult {
-    match item.disk_type.as_str() {
-        "aliyun" | "quark" | "uc" | "baidu" | "tianyi" | "123" | "xunlei" | "115" | "mobile" => {
+    match DiskType::from_str(&item.disk_type) {
+        DiskType::Aliyun | DiskType::Quark | DiskType::Uc | DiskType::Baidu
+        | DiskType::Tianyi | DiskType::N123 | DiskType::Xunlei | DiskType::N115 | DiskType::Mobile => {
             if normalized.contains("http") {
                 build_result(item, normalized, "uncertain", false, "Rust版本检测器待接入平台API")
             } else {

@@ -7,6 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 use serde_json::Value;
 
 use crate::{
+    constants::{DiskType, SourceType},
     model::SearchRequest,
     AppState,
 };
@@ -28,11 +29,11 @@ fn split_csv(v: Option<&String>) -> Vec<String> {
 
 fn normalize_search_request(req: &mut SearchRequest) {
     if req.source_type.is_empty() {
-        req.source_type = "all".to_string();
+        req.source_type = SourceType::All.as_str().to_string();
     }
-    match req.source_type.as_str() {
-        "tg" => req.plugins.clear(),
-        "plugin" => req.channels.clear(),
+    match SourceType::from_str(&req.source_type) {
+        SourceType::Tg => req.plugins.clear(),
+        SourceType::Plugin => req.channels.clear(),
         _ => {}
     }
 }
@@ -47,7 +48,7 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
         .and_then(|v| v.parse::<i32>().ok())
         .unwrap_or_default();
     let force_refresh = q.get("refresh").map(|v| v == "true").unwrap_or(false);
-    let source_type = q.get("src").cloned().unwrap_or_else(|| "all".to_string());
+    let source_type = q.get("src").cloned().unwrap_or_else(|| SourceType::All.as_str().to_string());
     let ext = q
         .get("ext")
         .and_then(|v| serde_json::from_str::<HashMap<String, Value>>(v).ok())
@@ -73,17 +74,7 @@ fn build_request_from_query(state: &Arc<AppState>, q: HashMap<String, String>) -
 }
 
 fn classify_disk_type_from_url(url: &str) -> String {
-    let lower = url.to_lowercase();
-    if lower.contains("pan.baidu.com") { return "baidu".into(); }
-    if lower.contains("pan.quark.cn") { return "quark".into(); }
-    if lower.contains("alipan.com") || lower.contains("aliyundrive.com") { return "aliyun".into(); }
-    if lower.contains("cloud.189.cn") { return "tianyi".into(); }
-    if lower.contains("drive.uc.cn") { return "uc".into(); }
-    if lower.contains("yun.139.com") || lower.contains("caiyun.139.com") { return "mobile".into(); }
-    if lower.contains("115.com") || lower.contains("115cdn.com") || lower.contains("anxia.com") { return "115".into(); }
-    if lower.contains("pan.xunlei.com") { return "xunlei".into(); }
-    if lower.contains("123pan.com") || lower.contains("123pan.cn") || lower.contains("123684.com") { return "123".into(); }
-    "others".into()
+    DiskType::from_url(url).as_str().to_string()
 }
 
 fn urlencoding(input: &str) -> String {
