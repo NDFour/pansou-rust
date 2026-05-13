@@ -513,9 +513,9 @@ function bindPaginationEvents() {
       if (action === 'next') state.currentPage++;
 
       // 滚动到搜索结果顶部
-      const searchInput = document.getElementById('results-container');
-      if (searchInput) {
-        searchInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      const resultsContainer = document.getElementById('results-container');
+      if (resultsContainer) {
+        resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       const container = document.getElementById('results-container');

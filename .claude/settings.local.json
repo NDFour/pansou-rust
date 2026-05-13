@@ -9,7 +9,9 @@
       "Bash(rtk git commit -m ' *)",
       "Bash(rtk grep *)",
       "Bash(rtk find *)",
-      "Bash(rtk cargo *)"
+      "Bash(rtk cargo *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk read *)"
     ]
   }
 }

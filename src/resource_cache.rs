@@ -17,27 +17,34 @@ pub struct ResourceInfo {
     pub password: String,
     pub created_at: i64,
     pub clicks: u64,
+    pub last_accessed_at: i64,
 }
 
 #[derive(Clone)]
 pub struct ResourceCache {
     resources: Arc<DashMap<String, ResourceInfo>>,
+    max_size: usize,
 }
 
 impl ResourceCache {
-    pub fn new() -> Self {
+    pub fn new(max_size: usize) -> Self {
         Self {
             resources: Arc::new(DashMap::new()),
+            max_size,
         }
     }
 
     pub fn insert(&self, title: &str, url: &str, disk_type: &str, channel: &str, password: &str) -> String {
         let id = short_id(url);
+        let now = chrono::Utc::now().timestamp();
 
         if let Some(mut entry) = self.resources.get_mut(&id) {
             entry.clicks += 1;
+            entry.last_accessed_at = now;
             return id;
         }
+
+        self.evict_if_needed();
 
         let info = ResourceInfo {
             id: id.clone(),
@@ -46,8 +53,9 @@ impl ResourceCache {
             disk_type: disk_type.to_string(),
             channel: channel.to_string(),
             password: password.to_string(),
-            created_at: chrono::Utc::now().timestamp(),
+            created_at: now,
             clicks: 1,
+            last_accessed_at: now,
         };
         self.resources.insert(id.clone(), info);
         id
@@ -78,6 +86,21 @@ impl ResourceCache {
             }
         }
         keywords
+    }
+
+    fn evict_if_needed(&self) {
+        if self.resources.len() < self.max_size {
+            return;
+        }
+
+        let lru = self.resources
+            .iter()
+            .min_by_key(|e| e.value().last_accessed_at)
+            .map(|e| e.key().clone());
+
+        if let Some(key) = lru {
+            self.resources.remove(&key);
+        }
     }
 }
 

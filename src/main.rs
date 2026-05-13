@@ -81,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size, &config.post_search_endpoint),
         check_service: CheckService::new(),
         templates,
-        resource_cache: ResourceCache::new(),
+        resource_cache: ResourceCache::new(config.max_cache_size),
     });
 
     let api_router = Router::new()

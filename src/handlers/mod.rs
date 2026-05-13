@@ -167,7 +167,7 @@ mod tests {
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
             templates: std::sync::Arc::new(tera::Tera::default()),
-            resource_cache: crate::resource_cache::ResourceCache::new(),
+            resource_cache: crate::resource_cache::ResourceCache::new(100),
         });
 
         let mut q = HashMap::new();
@@ -186,7 +186,7 @@ mod tests {
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
             templates: std::sync::Arc::new(tera::Tera::default()),
-            resource_cache: crate::resource_cache::ResourceCache::new(),
+            resource_cache: crate::resource_cache::ResourceCache::new(100),
         });
 
         let mut q = HashMap::new();
@@ -206,7 +206,7 @@ mod tests {
             search_service: SearchService::new(2, Duration::from_secs(5 * 60), 512, ""),
             check_service: crate::service::CheckService::new(),
             templates: std::sync::Arc::new(tera::Tera::default()),
-            resource_cache: crate::resource_cache::ResourceCache::new(),
+            resource_cache: crate::resource_cache::ResourceCache::new(100),
         });
 
         let mut q = HashMap::new();
