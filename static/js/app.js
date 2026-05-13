@@ -747,5 +747,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (document.getElementById('search-input')) {
     initSearchPage();
     await loadChannels();
+
+    // Bind click tracking for server-rendered results
+    state.currentKeyword = document.getElementById('search-input')?.value || '';
+    if (document.querySelector('.merged-card')) {
+      bindResultEvents();
+    }
   }
 });

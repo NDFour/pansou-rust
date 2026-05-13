@@ -6,7 +6,9 @@
       "Bash(cargo test *)",
       "Bash(rtk ls *)",
       "Bash(rtk git *)",
-      "Bash(rtk git commit -m ' *)"
+      "Bash(rtk git commit -m ' *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)"
     ]
   }
 }
