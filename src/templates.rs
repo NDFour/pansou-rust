@@ -1,14 +1,24 @@
 use std::collections::HashMap;
 
 use chrono::TimeZone;
+use rust_embed::RustEmbed;
 use tera::{Context, Tera, Value};
 use tracing::info;
 
 use crate::constants::CRAWLER_UA_FRAGMENTS;
 
-pub fn init_templates(templates_dir: &str) -> anyhow::Result<Tera> {
-    let pattern = format!("{}/**/*.html", templates_dir);
-    let mut tera = Tera::new(&pattern)?;
+#[derive(RustEmbed)]
+#[folder = "templates/"]
+struct Templates;
+
+pub fn init_templates() -> anyhow::Result<Tera> {
+    let mut tera = Tera::default();
+    for file in Templates::iter() {
+        if let Some(content) = Templates::get(&file) {
+            let content_str = std::str::from_utf8(&content.data)?;
+            tera.add_raw_template(&file, content_str)?;
+        }
+    }
     tera.register_filter("timestamp_to_iso8601", timestamp_to_iso8601);
     tera.register_filter("timestamp_to_date", timestamp_to_date);
     Ok(tera)

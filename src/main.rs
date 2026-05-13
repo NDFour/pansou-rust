@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     info!("配置: {:?}", config);
 
     let templates = Arc::new(
-        templates::init_templates(&config.templates_dir)
+        templates::init_templates()
             .expect("无法加载 HTML 模板")
     );
 

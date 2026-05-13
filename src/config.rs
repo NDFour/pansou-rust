@@ -16,8 +16,6 @@ pub struct AppConfig {
     // SEO 相关
     #[serde(default)]
     pub domain: String,
-    #[serde(default = "default_templates_dir")]
-    pub templates_dir: String,
 }
 
 impl Default for AppConfig {
@@ -33,13 +31,8 @@ impl Default for AppConfig {
             channels: vec!["tgsearchers6".to_string()],
             post_search_endpoint: String::new(),
             domain: String::new(),
-            templates_dir: "templates".to_string(),
         }
     }
-}
-
-fn default_templates_dir() -> String {
-    "templates".to_string()
 }
 
 impl AppConfig {
