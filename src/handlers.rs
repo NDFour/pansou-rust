@@ -261,7 +261,7 @@ pub async fn search_page_handler(
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
     if seo::is_crawler(ua) {
-        tracing::debug!("爬虫访问搜索页: keyword={}, ua={}", keyword, ua);
+        tracing::info!("爬虫访问搜索页: keyword={}, ua={}", keyword, ua);
     }
 
     if keyword.trim().is_empty() {

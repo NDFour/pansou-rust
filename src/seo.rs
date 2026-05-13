@@ -1,4 +1,5 @@
 use tera::{Context, Tera};
+use tracing::info;
 
 pub fn init_templates(templates_dir: &str) -> anyhow::Result<Tera> {
     let pattern = format!("{}/**/*.html", templates_dir);
@@ -27,10 +28,38 @@ pub fn related_searches(keyword: &str) -> Vec<String> {
     if keyword.is_empty() || keyword.len() > 20 {
         return vec![];
     }
-    vec![
-        format!("{} 百度网盘", keyword),
-        format!("{} 阿里云盘", keyword),
-        format!("{} 夸克网盘", keyword),
-        format!("{} 提取码", keyword),
-    ]
+    let mut other_keywords = vec![];
+    if !keyword.contains(" 百度网盘") {
+        other_keywords.insert(0, format!("{} 百度网盘", keyword));
+    } else {
+        other_keywords.insert(0, keyword.replace(" 百度网盘", "")); 
+    }
+
+    if !keyword.contains(" 阿里云盘") {
+        other_keywords.insert(0, format!("{} 阿里云盘", keyword));
+    } else {
+        other_keywords.insert(0, keyword.replace(" 阿里云盘", "")); 
+    }
+
+    if !keyword.contains(" 夸克网盘") {
+        other_keywords.insert(0, format!("{} 夸克网盘", keyword));
+    } else {
+        other_keywords.insert(0, keyword.replace(" 夸克网盘", "")); 
+    }
+
+    if !keyword.contains(" 网盘下载") {
+        other_keywords.insert(0, format!("{} 网盘下载", keyword));
+    } else {
+        other_keywords.insert(0, keyword.replace(" 网盘下载", "")); 
+    }
+
+    if !keyword.contains(" 网盘") {
+        other_keywords.insert(0, format!("{} 网盘", keyword));
+    } else {
+        other_keywords.insert(0, keyword.replace(" 网盘", "")); 
+    }
+
+    info!("返回 related_searches: {:?}", other_keywords);
+
+    other_keywords
 }
