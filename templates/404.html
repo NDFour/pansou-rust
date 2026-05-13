@@ -32,16 +32,18 @@
     <div class="search-bar" style="max-width:480px;margin:0 auto 1.5rem;">
       <input
         type="text"
-        id="search-input"
+        id="search-input-404"
         class="search-bar-input"
         placeholder="输入关键词搜索资源..."
         autocomplete="off"
         autofocus
+        onkeydown="if(event.key==='Enter')search404()"
       >
-      <button class="search-bar-btn" id="search-btn">
+      <button class="search-bar-btn" onclick="search404()">
         <span class="btn-text">搜索</span>
       </button>
     </div>
+    <script>function search404(){var q=document.getElementById('search-input-404').value.trim();if(q)location.href='/search?kw='+encodeURIComponent(q)}</script>
 
     <div style="margin-top:2rem;">
       <a href="/" style="color:var(--color-brand);text-decoration:none;font-size:0.95rem;">← 返回首页</a>

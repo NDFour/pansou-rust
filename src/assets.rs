@@ -1,17 +1,22 @@
+use std::sync::Arc;
+
 use axum::{
+    extract::State,
     http::{header, StatusCode, Uri},
     response::IntoResponse,
 };
 use rust_embed::RustEmbed;
 
-use crate::constants::cache;
-use crate::constants::cache_ext;
+use crate::constants::{cache, cache_ext, templates};
+use crate::handlers::format_domain;
+use crate::templates::render_template;
+use crate::AppState;
 
 #[derive(RustEmbed)]
 #[folder = "static/"]
 pub struct Assets;
 
-pub async fn serve_embedded(uri: Uri) -> impl IntoResponse {
+pub async fn serve_embedded(uri: Uri, State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
     let path = path.strip_prefix("static/").unwrap_or(path);
     let path = if path.is_empty() { "index.html" } else { path };
@@ -39,43 +44,17 @@ pub async fn serve_embedded(uri: Uri) -> impl IntoResponse {
                 content.data.into_owned(),
             ).into_response()
         }
-        None => (
-            StatusCode::NOT_FOUND,
-            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-            r#"<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>页面未找到 - 盘盘侠</title>
-<style>
-:root{--color-brand:#e85d3a;--color-stone:#6b6b6b;--color-ivory:#faf8f5;--color-border-warm:#e8e0d5;--radius-sm:8px}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#faf8f5;color:#2c2c2c;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.container{text-align:center;padding:2rem;max-width:520px}
-h1{font-size:1.5rem;font-weight:700;margin:1rem 0 .5rem}
-p{color:#6b6b6b;margin-bottom:1.5rem}
-a{color:#e85d3a;text-decoration:none}
-.search-bar{display:flex;max-width:400px;margin:0 auto 1.5rem}
-.search-bar-input{flex:1;padding:.75rem 1rem;border:2px solid #e8e0d5;border-radius:8px 0 0 8px;font-size:1rem;outline:none}
-.search-bar-input:focus{border-color:#e85d3a}
-.search-bar-btn{padding:.75rem 1.25rem;background:#e85d3a;color:#fff;border:none;border-radius:0 8px 8px 0;cursor:pointer;font-size:1rem;white-space:nowrap}
-</style>
-</head>
-<body>
-<div class="container">
-<div style="font-size:3rem">🔍</div>
-<h1>页面未找到</h1>
-<p>抱歉，您访问的页面不存在。试试搜索您想要的资源吧。</p>
-<div class="search-bar">
-<input type="text" id="s" class="search-bar-input" placeholder="输入关键词搜索资源..." autofocus onkeydown="if(event.key==='Enter')search()">
-<button class="search-bar-btn" onclick="search()">搜索</button>
-</div>
-<a href="/">← 返回首页</a>
-</div>
-<script>function search(){var q=document.getElementById('s').value.trim();if(q)location.href='/search?kw='+encodeURIComponent(q)}</script>
-</body>
-</html>"#,
-        ).into_response(),
+        None => {
+            let mut ctx = tera::Context::new();
+            ctx.insert("domain", &format_domain(&state.config.domain));
+            match render_template(&state.templates, templates::NOT_FOUND, ctx) {
+                Ok(html) => (
+                    StatusCode::NOT_FOUND,
+                    [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                    html,
+                ).into_response(),
+                Err(_) => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
+            }
+        }
     }
 }
