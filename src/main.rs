@@ -76,16 +76,12 @@ async fn main() -> anyhow::Result<()> {
             .expect("无法加载 HTML 模板")
     );
 
-    let persist_path = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("resource_cache.json")));
-
     let state = Arc::new(AppState {
         config: config.clone(),
         search_service: SearchService::new(config.concurrency, Duration::from_secs(config.cache_ttl), config.max_cache_size, &config.post_search_endpoint),
         check_service: CheckService::new(),
         templates,
-        resource_cache: ResourceCache::new(persist_path),
+        resource_cache: ResourceCache::new(),
     });
 
     let api_router = Router::new()
