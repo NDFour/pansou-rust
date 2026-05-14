@@ -13,10 +13,15 @@ struct Templates;
 
 pub fn init_templates() -> anyhow::Result<Tera> {
     let mut tera = Tera::default();
-    for file in Templates::iter() {
-        if let Some(content) = Templates::get(&file) {
+    let mut files: Vec<String> = Templates::iter().map(|f| f.into_owned()).collect();
+    // 确保 base.html 最先加载，否则 extends 继承会失败
+    if let Some(pos) = files.iter().position(|f| f == "base.html") {
+        files.swap(0, pos);
+    }
+    for file in &files {
+        if let Some(content) = Templates::get(file) {
             let content_str = std::str::from_utf8(&content.data)?;
-            tera.add_raw_template(&file, content_str)?;
+            tera.add_raw_template(file, content_str)?;
         }
     }
     tera.register_filter("timestamp_to_iso8601", timestamp_to_iso8601);
