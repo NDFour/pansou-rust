@@ -4,7 +4,7 @@
 
 支持链接有效性检测（TODO）、多插件并发搜索、内嵌前端界面。
 
-![网站截图](doc/imgs/index.png)
+![网站截图](docs/imgs/index.png)
 
 ## API 路由
 
