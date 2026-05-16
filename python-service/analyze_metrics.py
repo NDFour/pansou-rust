@@ -264,10 +264,10 @@ def render_feishu_text(today: dict[str, Any]) -> str:
         f"- 事件数: {today['total_events']}",
         f"- metric_value总和: {today['total_metric_value']}",
         f"- 类型分布: {json.dumps(today.get('metric_type_counts', {}), ensure_ascii=False)}",
-        f"\n- Top点击的搜索关键词: {render_top_lines(today.get('top_keywords', []))}",
-        f"\n- Top点击关键词: {render_top_lines(today.get('top_titles', []))}",
-        f"\n- Top域名: {render_top_lines(today.get('top_domains', []))}",
-        f"\n- Top频道: {render_top_lines(today.get('top_channels', []))}",
+        f"\n- Top点击的搜索关键词: \n{render_top_lines(today.get('top_keywords', []))}",
+        f"\n- Top点击关键词: \n{render_top_lines(today.get('top_titles', []))}",
+        f"\n- Top域名: \n{render_top_lines(today.get('top_domains', []))}",
+        f"\n- Top频道: \n{render_top_lines(today.get('top_channels', []))}",
     ]
     return "\n".join(lines)
 
