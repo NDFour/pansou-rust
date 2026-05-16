@@ -753,6 +753,36 @@ function bindResultEvents() {
 /* ============================================================
    Init
    ============================================================ */
+function showPortalAndNavigate(keyword, url) {
+  const overlay = document.createElement('div');
+  overlay.className = 'portal-overlay';
+
+  const particles = Array.from({ length: 8 }, (_, i) =>
+    `<div class="portal-particle" style="animation-delay:-${(i / 8 * 2.2).toFixed(2)}s"></div>`
+  ).join('');
+
+  overlay.innerHTML = `
+    <div class="portal-stage">
+      <div class="portal-glow"></div>
+      <div class="portal-ripple"></div>
+      <div class="portal-ripple"></div>
+      <div class="portal-ripple"></div>
+      ${particles}
+      <div class="portal-disk">
+        <div class="portal-disk-inner">盘</div>
+      </div>
+    </div>
+    <div class="portal-keyword">${escapeHtml(keyword)}</div>`;
+
+  document.body.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.location.href = url;
+    });
+  });
+}
+
 async function loadHotKeywords() {
   const container = document.getElementById('hot-searches');
   if (!container) return;
@@ -765,11 +795,23 @@ async function loadHotKeywords() {
 
     container.innerHTML = `
       <p style="color:var(--color-stone);font-size:0.85rem;margin-bottom:0.75rem;">大家都在搜</p>
-      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;">
+      <div class="hot-keywords-list" style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;">
         ${keywords.map(kw =>
-          `<a href="/search?kw=${encodeURIComponent(kw)}" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);">${escapeHtml(kw)}</a>`
+          `<a href="/search?kw=${encodeURIComponent(kw)}" class="hot-keyword-chip" data-kw="${escapeHtml(kw)}" style="color:var(--color-brand);text-decoration:none;font-size:0.85rem;padding:0.25rem 0.75rem;border:1px solid var(--color-border-warm);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s ease;">${escapeHtml(kw)}</a>`
         ).join('')}
       </div>`;
+
+    // Intercept clicks on hot keyword chips for portal transition
+    container.querySelectorAll('.hot-keyword-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        // Only intercept plain left clicks (allow Ctrl+click, right-click, etc.)
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        const kw = chip.dataset.kw;
+        const url = `/search?kw=${encodeURIComponent(kw)}`;
+        showPortalAndNavigate(kw, url);
+      });
+    });
   } catch {
     // 热词加载失败不阻塞主流程
   }
